@@ -729,17 +729,18 @@ body.role-readonly textarea { pointer-events:none; opacity:0.7; }
 body.role-readonly button:not([onclick*="openRoleModal"]):not([onclick*="closeModal"]):not([onclick*="setPlanTab"]):not([onclick*="setGanttZoom"]):not([onclick*="export"]):not([onclick*="render"]) { opacity:0.4; pointer-events:none; }
 
 /* ══════════════════════════════════════════════════════════════
-   PRINT STYLES — สำหรับ "Print → Save as PDF" (คุณภาพสูง)
-   - text จริง (vector, copy ได้, ขยายแล้วคม)
-   - ใช้ font engine ของ OS → ไทยไม่บิดเบี้ยว
-   - ไฟล์เล็กกว่า html2canvas 10-100 เท่า
+   @page — must be at TOP LEVEL (not nested in @media print)
+   This is the only reliable way to make landscape actually work in Chrome
+   ══════════════════════════════════════════════════════════════ */
+@page { size: A4 landscape; margin: 8mm 6mm; }
+
+/* Body class controls page size */
+body.print-mode-a4-landscape ~ * { /* placeholder for spec specificity */ }
+
+/* ══════════════════════════════════════════════════════════════
+   PRINT STYLES
    ══════════════════════════════════════════════════════════════ */
 @media print {
-  /* Page setup: A4 landscape default — สามารถ override ผ่าน body class */
-  @page { size: A4 landscape; margin: 10mm 8mm; }
-  body.print-portrait @page { size: A4 portrait; margin: 12mm 10mm; }
-  body.print-a3 @page { size: A3 landscape; margin: 10mm 8mm; }
-  body.print-a3-portrait @page { size: A3 portrait; margin: 12mm 10mm; }
 
   /* Force light theme for print — สีดำ-ขาว readable ทุก printer */
   :root, :root[data-theme="dark"], :root[data-theme="light"] {
@@ -768,8 +769,12 @@ body.role-readonly button:not([onclick*="openRoleModal"]):not([onclick*="closeMo
   [data-no-print]
   { display:none !important; }
 
-  .main { margin-left:0 !important; padding:0 !important; }
-  .app { display:block !important; }
+  .main { margin-left:0 !important; padding:0 !important; width:100% !important; max-width:none !important; }
+  .app { display:block !important; width:100% !important; max-width:none !important; }
+  .page { width:100% !important; max-width:none !important; padding:0 !important; margin:0 !important; }
+  /* Wide content (Gantt tables) — force to fill page width via scale transform */
+  body.print-fit-width .gantt-wrap { width:100% !important; overflow:visible !important; }
+  body.print-fit-width .gantt-table { width:100% !important; table-layout:fixed; }
 
   /* Show only the active page */
   .page:not(.active) { display:none !important; }
@@ -823,6 +828,15 @@ body.role-readonly button:not([onclick*="openRoleModal"]):not([onclick*="closeMo
   /* Page break helpers */
   .print-page-break { page-break-after:always; }
   .print-no-break { page-break-inside:avoid; }
+}
+
+/* Print mode: weekly materials only — hide detailed material table */
+body.print-weekly-only #materialTable { display:none !important; }
+body.print-weekly-only #materialTable + * { display:none !important; }
+body.print-weekly-only .card:has(#materialTable) { display:none !important; }
+@media print {
+  body.print-weekly-only #materialTable,
+  body.print-weekly-only .card:has(#materialTable) { display:none !important; }
 }
 
 /* Print preview mode (visible in browser before print) */
@@ -1137,7 +1151,7 @@ body.print-preview .page.active { background:#fff; min-height:100vh; padding:20m
             <th style="width:50px;">Tag</th>
             <th style="width:30px;">CRIT</th>
             <th style="width:110px;">ต้องใช้</th>
-            <th style="width:80px;">Lead</th>
+            <th style="width:90px;">เหลือ / Lead</th>
             <th style="width:130px;">สั่งภายใน</th>
             <th class="num" style="width:120px;">ปริมาณ</th>
             <th style="width:80px;">หน่วย</th>
@@ -3193,8 +3207,8 @@ function render3WeekView(p) {
         const hasActual = t.actualStart && t.actualEnd;
         bodyRows += `<tr data-task-id="${t.id}" class="plan-row">
           <td class="info-col col-no" rowspan="${hasActual?2:1}">${t.no||''}</td>
-          <td class="info-col col-name" rowspan="${hasActual?2:1}" oncontextmenu="showTaskContextMenu(event,'${t.id}');return false;" title="คลิก = แก้ · คลิกขวา = เมนู" style="cursor:pointer;" onclick="openTaskModal('${t.id}')">
-            ${t.isCritical?'<span style="color:var(--red);font-size:9px;">🔴</span> ':''}${t.name||''}${t.warning?` <span style="color:var(--accent);" title="${(t.warning||'').replace(/"/g,'&quot;')}">⚠</span>`:''}
+          <td class="info-col col-name" rowspan="${hasActual?2:1}" oncontextmenu="showTaskContextMenu(event,'${t.id}');return false;" title="คลิก = แก้ · ดับเบิ้ลคลิก = ลงวันตรวจงาน · คลิกขวา = เมนู" style="cursor:pointer;" onclick="openTaskModal('${t.id}')" ondblclick="event.stopPropagation();openInspectionModal('task','${t.id}','')">
+            ${t.isCritical?'<span style="color:var(--red);font-size:9px;">🔴</span> ':''}${t.name||''}${t.warning?` <span style="color:var(--accent);" title="${(t.warning||'').replace(/"/g,'&quot;')}">⚠</span>`:''}${(t.inspections||[]).length?` <span style="color:var(--green);font-size:9px;" title="มี ${t.inspections.length} บันทึกการตรวจ">📋${t.inspections.length}</span>`:''}
             ${hasActual?'<div class="text-xs text-muted" style="font-size:8px;font-weight:400;">PLAN</div>':''}
           </td>
           <td class="info-col col-start">${fmtDateCE(t.planStart)}</td>
@@ -3218,11 +3232,10 @@ function render3WeekView(p) {
           const stStatus = subTaskStatus(st);
           const stHasActual = st.actualStart && st.actualEnd;
           const stPlanCells = buildCells21(st.planStart, st.planEnd, stStatus, st.isCritical, 'plan', st.id, true);
-          // 4 info cols (no col-pct in 3-week view): col-no, col-name, col-start, col-finish + 21 day cells = 25 td
           bodyRows += `<tr class="sub-row" data-sub-id="${st.id}">
             <td class="info-col col-no" rowspan="${stHasActual?2:1}"></td>
-            <td class="info-col col-name" rowspan="${stHasActual?2:1}" style="cursor:pointer;" onclick="openSubTaskModal('${t.id}','${st.id}')">
-              ${st.isCritical?'<span style="color:var(--red);font-size:8px;">🔴</span> ':''}${st.name||''}
+            <td class="info-col col-name" rowspan="${stHasActual?2:1}" style="cursor:pointer;" onclick="openSubTaskModal('${t.id}','${st.id}')" ondblclick="event.stopPropagation();openInspectionModal('sub','${t.id}','${st.id}')" title="คลิก = แก้ · ดับเบิ้ลคลิก = ลงวันตรวจงาน">
+              ${st.isCritical?'<span style="color:var(--red);font-size:8px;">🔴</span> ':''}${st.name||''}${(st.inspections||[]).length?` <span style="color:var(--green);font-size:8px;" title="มี ${st.inspections.length} บันทึก">📋${st.inspections.length}</span>`:''}
             </td>
             <td class="info-col col-start">${fmtDateCE(st.planStart)}</td>
             <td class="info-col col-finish">${fmtDateCE(st.planEnd)}</td>
@@ -3238,39 +3251,28 @@ function render3WeekView(p) {
           }
         });
 
-        // ─── Per-week + button row ───
-        // 4 info cols (no col-pct in 3-week) + 3 week cells = matches task row structure
+        // ─── Compact "+ sub-task" row — small inline buttons per week (replaces the large row)
         const taskActiveIn = (wkStart, wkEnd) => {
           if (!t.planStart || !t.planEnd) return false;
           return !(t.planEnd < wkStart || t.planStart > wkEnd);
         };
-        let weekAddCells = '';
+        let weekBtnCells = '';
         weeks.forEach((w, wi) => {
           const active = taskActiveIn(w.start, w.end);
           const styleBreak = wi > 0 ? 'border-left:3px solid var(--accent);' : '';
-          const wkBg = wi === 0 ? 'rgba(88,166,255,0.06)'
-                     : wi === 1 ? 'rgba(240,180,41,0.06)'
-                     : 'rgba(63,185,80,0.06)';
           if (active) {
-            const activeBg = wi === 0 ? 'rgba(88,166,255,0.15)'
-                           : wi === 1 ? 'rgba(240,180,41,0.18)'
-                           : 'rgba(63,185,80,0.15)';
-            const activeColor = wi === 0 ? 'var(--blue)'
-                              : wi === 1 ? 'var(--accent)'
-                              : 'var(--green)';
-            weekAddCells += `<td colspan="7" class="week-add-cell" data-task-id="${t.id}" data-week-start="${w.start}" data-week-end="${w.end}" style="${styleBreak}background:${activeBg};text-align:center;cursor:pointer;font-size:11px;font-weight:700;color:${activeColor};padding:6px 4px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);" title="เพิ่ม sub-task ในสัปดาห์ของ ${fmtDateShort(w.start)} – ${fmtDateShort(w.end)}">➕ เพิ่ม sub-task</td>`;
+            const color = wi === 0 ? 'var(--blue)' : wi === 1 ? 'var(--accent)' : 'var(--green)';
+            weekBtnCells += `<td colspan="7" class="week-add-cell" data-task-id="${t.id}" data-week-start="${w.start}" data-week-end="${w.end}" style="${styleBreak}text-align:center;cursor:pointer;font-size:9px;color:${color};padding:2px 0;background:rgba(139,148,158,0.03);" title="เพิ่ม sub-task ในสัปดาห์นี้">+ sub</td>`;
           } else {
-            weekAddCells += `<td colspan="7" style="${styleBreak}background:${wkBg};border-top:1px solid var(--border);border-bottom:1px solid var(--border);"></td>`;
+            weekBtnCells += `<td colspan="7" style="${styleBreak}background:rgba(139,148,158,0.03);padding:2px 0;"></td>`;
           }
         });
-        // 4 separate <td> cells for info columns to match new structure
-        const infoCellStyle = 'background:var(--bg3);border-top:1px solid var(--border);border-bottom:1px solid var(--border);font-size:10px;color:var(--text2);padding:6px 4px;';
-        bodyRows += `<tr class="week-add-row" data-task-id="${t.id}">
-          <td class="info-col col-no" style="${infoCellStyle}"></td>
-          <td class="info-col col-name" style="${infoCellStyle}text-align:right;font-weight:600;">↳ เพิ่ม sub:</td>
-          <td class="info-col col-start" style="${infoCellStyle}"></td>
-          <td class="info-col col-finish" style="${infoCellStyle}"></td>
-          ${weekAddCells}
+        bodyRows += `<tr class="week-add-row compact-add" data-task-id="${t.id}">
+          <td class="info-col col-no" style="background:var(--bg3);padding:2px 4px;font-size:8px;color:var(--text3);"></td>
+          <td class="info-col col-name" style="background:var(--bg3);padding:2px 6px;font-size:8px;color:var(--text3);text-align:right;">↳</td>
+          <td class="info-col col-start" style="background:var(--bg3);padding:2px;"></td>
+          <td class="info-col col-finish" style="background:var(--bg3);padding:2px;"></td>
+          ${weekBtnCells}
         </tr>`;
       });
     });
@@ -3278,7 +3280,7 @@ function render3WeekView(p) {
 
   document.getElementById('threeWeekView').innerHTML = `
     <div style="background:var(--bg3);padding:6px 12px;border-radius:6px;margin-bottom:8px;font-size:10px;color:var(--text2);">
-      💡 <strong>ดับเบิ้ลคลิก</strong>ที่เซลล์วันใดๆ เพื่อเพิ่มสั่งวัสดุ · คลิก <strong>"+ เพิ่ม sub-task"</strong> ในกล่องสีตามสัปดาห์ใต้ task · <span style="display:inline-block;width:14px;height:10px;border:3px solid #f0b429;border-radius:1px;vertical-align:middle;"></span> = วันที่ต้องใช้วัสดุ
+      💡 <strong>ดับเบิ้ลคลิก</strong>ที่ <strong>เซลล์วัน</strong> = เพิ่มสั่งวัสดุ · <strong>ดับเบิ้ลคลิก</strong>ที่ <strong>ชื่อ task/sub-task</strong> = ลงวันตรวจงาน · <strong>"+ sub"</strong> ในแถวล่าง task เพื่อเพิ่ม sub-task · <span style="display:inline-block;width:14px;height:10px;border:3px solid #f0b429;border-radius:1px;vertical-align:middle;"></span> = วันต้องใช้วัสดุ
     </div>
     <div class="gantt-wrap">
       <table class="gantt-table">
@@ -4084,8 +4086,19 @@ function renderMaterialsView(p) {
          onchange="updateMaterialField('${p.id}','${m.id}','isCritical',this.checked)" title="สำคัญ"></td>
       <td><input type="date" class="inline-text" value="${m.needDate||''}"
          onchange="updateMaterialField('${p.id}','${m.id}','needDate',this.value)"></td>
-      <td><input type="number" class="inline-input" value="${m.leadDays||''}" placeholder="0" style="width:50px;"
-         onchange="updateMaterialField('${p.id}','${m.id}','leadDays',this.value)"> วัน</td>
+      <td title="Lead time: ${m.leadDays||0} วัน | คลิกเพื่อแก้">
+        ${(() => {
+          const daysUntilNeed = m.needDate ? daysBetween(today(), m.needDate) : null;
+          if (daysUntilNeed === null) return '<span class="text-muted">-</span>';
+          if (daysUntilNeed < 0) return `<span style="color:var(--red);font-weight:700;font-size:11px;">⏱ เลย ${Math.abs(daysUntilNeed)} วัน</span>`;
+          if (daysUntilNeed === 0) return `<span style="color:var(--red);font-weight:700;font-size:11px;">⏱ วันนี้!</span>`;
+          if (daysUntilNeed <= 3) return `<span style="color:var(--red);font-weight:700;font-size:11px;">⏱ เหลือ ${daysUntilNeed} วัน</span>`;
+          if (daysUntilNeed <= 7) return `<span style="color:var(--accent);font-weight:600;font-size:11px;">⏱ เหลือ ${daysUntilNeed} วัน</span>`;
+          return `<span style="color:var(--text2);font-size:11px;">เหลือ ${daysUntilNeed} วัน</span>`;
+        })()}
+        <br><span style="font-size:9px;color:var(--text3);">Lead: <input type="number" class="inline-input" value="${m.leadDays||''}" placeholder="0" style="width:40px;font-size:10px;"
+         onchange="updateMaterialField('${p.id}','${m.id}','leadDays',this.value)">d</span>
+      </td>
       <td class="${urgencyCls}">${urgencyIcon}${m.orderByDate?fmtDate(m.orderByDate):'-'}</td>
       <td class="num"><input type="text" class="inline-text" value="${(m.qty||'').replace(/"/g,'&quot;')}" placeholder="ปริมาณ"
          onchange="updateMaterialField('${p.id}','${m.id}','qty',this.value)"></td>
@@ -4130,14 +4143,25 @@ function renderWeeklyMaterials() {
 
   // Collect materials
   let allMats = [];
+  // Helper: resolve effective tag (use library lookup if missing)
+  const resolveTag = (m, libCache) => {
+    if (m.tag && m.tag !== 'main') return m.tag;  // explicit non-default = trust it
+    const libMatch = libCache.find(L => L.name === m.item);
+    if (libMatch && libMatch.tag) return libMatch.tag;
+    return m.tag || 'main';
+  };
   if (projSel === 'all') {
     state.projects.forEach(p => {
-      (p.materials||[]).forEach(m => allMats.push({ ...m, projectId:p.id, projectName:p.name, projectColor:p.color }));
+      const lib = getMaterialLibrary(p);
+      (p.materials||[]).forEach(m => allMats.push({ ...m, tag: resolveTag(m, lib), projectId:p.id, projectName:p.name, projectColor:p.color }));
     });
   } else {
     const pid = document.getElementById('planProjectSel')?.value;
     const p = pid ? getProject(pid) : null;
-    if (p) (p.materials||[]).forEach(m => allMats.push({ ...m, projectId:p.id, projectName:p.name, projectColor:p.color }));
+    if (p) {
+      const lib = getMaterialLibrary(p);
+      (p.materials||[]).forEach(m => allMats.push({ ...m, tag: resolveTag(m, lib), projectId:p.id, projectName:p.name, projectColor:p.color }));
+    }
   }
 
   // Build week buckets
@@ -5538,6 +5562,162 @@ function deleteSubTaskFromModal(pid, tid, stid) {
   t.subTasks = (t.subTasks||[]).filter(s => s.id !== stid);
   saveState(); closeModal(); renderPlan();
   toast('ลบแล้ว');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   INSPECTION LOG (ลงวันตรวจงาน) — double-click on task/sub-task row
+   ══════════════════════════════════════════════════════════════ */
+function openInspectionModal(targetType, taskId, subTaskId) {
+  const pid = document.getElementById('planProjectSel').value;
+  const p = getProject(pid);
+  if (!p) return;
+  let target, parentName = '';
+  if (targetType === 'task') {
+    target = (p.tasks||[]).find(t => t.id === taskId);
+    if (!target) { toast('ไม่พบ task','error'); return; }
+  } else {
+    const parent = (p.tasks||[]).find(t => t.id === taskId);
+    if (!parent) { toast('ไม่พบ task','error'); return; }
+    target = (parent.subTasks||[]).find(s => s.id === subTaskId);
+    if (!target) { toast('ไม่พบ sub-task','error'); return; }
+    parentName = parent.name || '';
+  }
+
+  target.inspections = target.inspections || [];
+
+  const inspectionList = target.inspections.length === 0
+    ? '<div class="text-muted text-center" style="padding:20px;font-size:11px;">ยังไม่มีบันทึกการตรวจ</div>'
+    : target.inspections.slice().reverse().map((ins, revIdx) => {
+        const origIdx = target.inspections.length - 1 - revIdx;
+        const resultColor = ins.result === 'pass' ? 'var(--green)'
+                          : ins.result === 'fail' ? 'var(--red)'
+                          : 'var(--accent)';
+        const resultLabel = ins.result === 'pass' ? '✓ ผ่าน'
+                          : ins.result === 'fail' ? '✗ ไม่ผ่าน'
+                          : '⚠ มีข้อแก้ไข';
+        return `<div style="border:1px solid var(--border);border-left:3px solid ${resultColor};border-radius:6px;padding:8px 12px;margin-bottom:6px;background:var(--bg2);">
+          <div class="flex-between" style="margin-bottom:4px;">
+            <strong style="font-size:12px;color:${resultColor};">${resultLabel}</strong>
+            <span class="text-xs text-muted">${fmtDate(ins.date)} ${ins.time?'· '+ins.time:''}</span>
+          </div>
+          <div class="text-xs" style="margin-bottom:3px;"><strong>ผู้ตรวจ:</strong> ${(ins.inspector||'-').replace(/</g,'&lt;')}</div>
+          ${ins.note ? `<div class="text-xs" style="color:var(--text2);background:var(--bg3);padding:4px 6px;border-radius:4px;margin-top:4px;">${(ins.note||'').replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>` : ''}
+          <button class="btn btn-sm btn-danger" style="margin-top:4px;padding:2px 8px;font-size:9px;" onclick="deleteInspection('${pid}','${taskId}','${subTaskId||''}','${targetType}',${origIdx})">ลบ</button>
+        </div>`;
+      }).join('');
+
+  const titleIcon = targetType === 'task' ? '📋' : '🔸';
+  const titleLabel = targetType === 'task' ? 'Task' : 'Sub-task';
+  const targetTitle = targetType === 'task'
+    ? `${target.no||''}. ${target.name||''}`
+    : `${target.name||''} <span class="text-xs text-muted">(ของ ${parentName})</span>`;
+
+  // Get current user (from role) for default inspector
+  const role = (typeof getCurrentRole === 'function') ? getCurrentRole() : { name:'' };
+  const defaultInspector = role.name || '';
+
+  const nowDate = today();
+  const nowTime = new Date().toTimeString().slice(0,5);
+
+  openModal(`<div class="modal-title">${titleIcon} ลงวันตรวจงาน — ${titleLabel}</div>
+    <div class="modal-sub">${targetTitle}</div>
+
+    <div style="background:rgba(63,185,80,0.06);border-left:3px solid var(--green);padding:10px 12px;border-radius:6px;margin-bottom:14px;">
+      <div class="text-xs text-bold mb-sm">+ เพิ่มบันทึกการตรวจใหม่</div>
+      <div class="field-row">
+        <div class="field-group"><label>วันที่ตรวจ</label>
+          <input type="date" id="ins_date" value="${nowDate}">
+        </div>
+        <div class="field-group"><label>เวลา</label>
+          <input type="time" id="ins_time" value="${nowTime}">
+        </div>
+      </div>
+      <div class="field-group"><label>ผู้ตรวจ</label>
+        <input type="text" id="ins_inspector" value="${defaultInspector}" placeholder="ชื่อ-สกุล ผู้ตรวจ">
+      </div>
+      <div class="field-group"><label>ผลการตรวจ</label>
+        <select id="ins_result">
+          <option value="pass">✓ ผ่าน</option>
+          <option value="fix">⚠ มีข้อแก้ไข</option>
+          <option value="fail">✗ ไม่ผ่าน</option>
+        </select>
+      </div>
+      <div class="field-group"><label>หมายเหตุ / รายละเอียดที่ตรวจ</label>
+        <textarea id="ins_note" rows="3" placeholder="เช่น ตรวจ cover คอนกรีต ผ่านเรียบร้อย / พบรูพรุนต้องซ่อม / ฯลฯ"></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="saveInspection('${pid}','${taskId}','${subTaskId||''}','${targetType}')" style="width:100%;background:linear-gradient(135deg, var(--green), #2d8a3e);">+ บันทึกการตรวจ</button>
+    </div>
+
+    <div class="text-xs text-bold mb-sm" style="color:var(--accent);">📜 ประวัติการตรวจ (${target.inspections.length})</div>
+    <div style="max-height:35vh;overflow-y:auto;">${inspectionList}</div>
+
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">ปิด</button>
+      ${targetType === 'task'
+        ? `<button class="btn" onclick="closeModal();openTaskModal('${taskId}')">✎ แก้ Task</button>`
+        : `<button class="btn" onclick="closeModal();openSubTaskModal('${taskId}','${subTaskId}')">✎ แก้ Sub-task</button>`}
+    </div>`);
+}
+
+function saveInspection(pid, taskId, subTaskId, targetType) {
+  const p = getProject(pid);
+  if (!p) return;
+  let target;
+  if (targetType === 'task') {
+    target = (p.tasks||[]).find(t => t.id === taskId);
+  } else {
+    const parent = (p.tasks||[]).find(t => t.id === taskId);
+    target = parent ? (parent.subTasks||[]).find(s => s.id === subTaskId) : null;
+  }
+  if (!target) return;
+
+  const date = document.getElementById('ins_date').value;
+  const time = document.getElementById('ins_time').value;
+  const inspector = document.getElementById('ins_inspector').value.trim();
+  const result = document.getElementById('ins_result').value;
+  const note = document.getElementById('ins_note').value.trim();
+
+  if (!date) { toast('กรอกวันที่','error'); return; }
+  if (!inspector) { toast('กรอกชื่อผู้ตรวจ','error'); return; }
+
+  target.inspections = target.inspections || [];
+  target.inspections.push({
+    id: uid(),
+    date, time, inspector, result, note,
+    createdAt: new Date().toISOString(),
+  });
+
+  // Auto-update related fields based on inspection result
+  if (result === 'pass') {
+    // If pass and no actualEnd yet → set actualEnd to inspection date
+    if (!target.actualEnd) target.actualEnd = date;
+    if (!target.actualStart) target.actualStart = target.planStart || date;
+    if ((+target.actualPct||0) < 100) target.actualPct = 100;
+  }
+
+  saveState();
+  toast(`✓ บันทึกการตรวจ ${result === 'pass' ? 'ผ่าน' : result === 'fail' ? 'ไม่ผ่าน' : 'มีข้อแก้ไข'}`);
+  closeModal();
+  // Re-open to show updated history
+  openInspectionModal(targetType, taskId, subTaskId);
+}
+
+function deleteInspection(pid, taskId, subTaskId, targetType, idx) {
+  if (!confirm('ลบบันทึกการตรวจนี้?')) return;
+  const p = getProject(pid);
+  if (!p) return;
+  let target;
+  if (targetType === 'task') {
+    target = (p.tasks||[]).find(t => t.id === taskId);
+  } else {
+    const parent = (p.tasks||[]).find(t => t.id === taskId);
+    target = parent ? (parent.subTasks||[]).find(s => s.id === subTaskId) : null;
+  }
+  if (!target || !target.inspections) return;
+  target.inspections.splice(idx, 1);
+  saveState();
+  closeModal();
+  openInspectionModal(targetType, taskId, subTaskId);
 }
 
 /* ─── EXCEL UPLOAD (Plan) ─── */
@@ -7345,105 +7525,158 @@ function buildMaterialsSheet(wb, p) {
    PRINT → PDF  (high-quality, text-based, via browser print dialog)
    ══════════════════════════════════════════════════════════════ */
 function openPrintModal() {
-  // Detect current page + tab
   const activePage = document.querySelector('.page.active')?.id?.replace('page-','') || 'dashboard';
   const activeTab = (typeof planTab !== 'undefined') ? planTab : 'gantt';
 
-  const pageOpts = [
-    { id:'dashboard', label:'📊 Dashboard (สรุปทุกโครงการ)' },
-    { id:'plan-gantt', label:'📋 Gantt Chart (รายโครงการ)' },
-    { id:'plan-3week', label:'📅 3-Week Lookahead' },
-    { id:'plan-scurve', label:'📈 Master Schedule + S-Curve' },
-    { id:'plan-list', label:'📃 List View (รายการ Task)' },
-    { id:'plan-materials', label:'🧱 สั่งวัสดุ (Weekly Summary)' },
-    { id:'reports', label:'📑 Reports (Executive view)' },
-  ];
-
-  // Default to current view
   let defaultPrintTarget = activePage;
   if (activePage === 'plan') defaultPrintTarget = 'plan-' + activeTab;
 
+  // Quick-action presets for common documents
+  const presets = [
+    { id:'weekly-materials', label:'📦 สรุปสั่งวัสดุประจำสัปดาห์', desc:'เฉพาะ "Weekly Material Order Summary" (ส่งจัดซื้อ)', icon:'📦', color:'var(--green)' },
+    { id:'plan-gantt', label:'📊 Gantt Chart รายโครงการ', desc:'Master schedule + timeline', icon:'📊', color:'var(--blue)' },
+    { id:'plan-3week', label:'📅 3-Week Lookahead', desc:'แผน 3 สัปดาห์หน้า', icon:'📅', color:'var(--accent)' },
+    { id:'dashboard', label:'📈 Dashboard รวม', desc:'สรุปทุกโครงการ', icon:'📈', color:'var(--purple)' },
+    { id:'reports', label:'📑 Reports (Executive)', desc:'รายงานสำหรับผู้บริหาร', icon:'📑', color:'var(--orange)' },
+  ];
+
+  const presetCards = presets.map(p => `
+    <div class="print-preset-card" data-target="${p.id}" style="border:2px solid var(--border);border-radius:8px;padding:10px 14px;cursor:pointer;transition:all 0.2s;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:24px;">${p.icon}</span>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:700;color:${p.color};">${p.label}</div>
+          <div style="font-size:10px;color:var(--text2);">${p.desc}</div>
+        </div>
+        <span style="color:${p.color};font-size:18px;">→</span>
+      </div>
+    </div>`).join('');
+
   openModal(`<div class="modal-title">🖨 Print → Save as PDF</div>
-    <div class="modal-sub">คุณภาพสูง · ไทยไม่บิดเบี้ยว · ไฟล์เล็ก · ขยายแล้วคม</div>
+    <div class="modal-sub">คุณภาพสูง · ไทยไม่บิดเบี้ยว · ขยายแล้วคม</div>
 
-    <div style="background:rgba(63,185,80,0.08);border-left:3px solid var(--green);padding:10px 12px;border-radius:6px;margin-bottom:14px;font-size:11px;line-height:1.6;">
-      <strong style="color:var(--green);">💡 วิธีใช้:</strong><br>
-      1. เลือกหน้าที่ต้องการพิมพ์ด้านล่าง<br>
-      2. กดปุ่ม <strong>"🖨 พิมพ์"</strong> → browser จะเปิดหน้าต่าง print dialog<br>
-      3. ที่ <strong>Destination</strong> เลือก <strong>"Save as PDF"</strong> (หรือ "บันทึกเป็น PDF")<br>
-      4. กด <strong>Save</strong> → ได้ PDF คุณภาพสูง text-vector
+    <div style="background:rgba(63,185,80,0.08);border-left:3px solid var(--green);padding:8px 12px;border-radius:6px;margin-bottom:14px;font-size:11px;line-height:1.6;">
+      💡 <strong>คลิกการ์ดด้านล่าง</strong> เพื่อพิมพ์เอกสารนั้นเลย — หรือเลื่อนลงเลือก custom
     </div>
 
-    <div class="field-group"><label>หน้าที่ต้องการพิมพ์</label>
-      <select id="printTarget">
-        ${pageOpts.map(o => `<option value="${o.id}" ${o.id===defaultPrintTarget?'selected':''}>${o.label}</option>`).join('')}
-      </select>
-    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px;">${presetCards}</div>
 
-    <div class="field-row">
-      <div class="field-group"><label>ขนาดกระดาษ</label>
-        <select id="printSize">
-          <option value="a4" selected>A4</option>
-          <option value="a3">A3 (สำหรับ Gantt ใหญ่)</option>
+    <details style="border-top:1px solid var(--border);padding-top:12px;">
+      <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;">⚙ ตัวเลือกขั้นสูง (custom)</summary>
+
+      <div class="field-group" style="margin-top:10px;"><label>หน้าที่ต้องการพิมพ์</label>
+        <select id="printTarget">
+          <option value="dashboard" ${defaultPrintTarget==='dashboard'?'selected':''}>📊 Dashboard</option>
+          <option value="plan-gantt" ${defaultPrintTarget==='plan-gantt'?'selected':''}>📋 Gantt Chart</option>
+          <option value="plan-3week" ${defaultPrintTarget==='plan-3week'?'selected':''}>📅 3-Week Lookahead</option>
+          <option value="plan-scurve" ${defaultPrintTarget==='plan-scurve'?'selected':''}>📈 Master + S-Curve</option>
+          <option value="plan-list" ${defaultPrintTarget==='plan-list'?'selected':''}>📃 List View</option>
+          <option value="plan-materials" ${defaultPrintTarget==='plan-materials'?'selected':''}>🧱 สั่งวัสดุ (ทั้งหน้า)</option>
+          <option value="weekly-materials">📦 เฉพาะ Weekly Materials</option>
+          <option value="reports" ${defaultPrintTarget==='reports'?'selected':''}>📑 Reports</option>
         </select>
       </div>
-      <div class="field-group"><label>แนวกระดาษ</label>
-        <select id="printOrient">
-          <option value="landscape" selected>แนวนอน (Landscape)</option>
-          <option value="portrait">แนวตั้ง (Portrait)</option>
-        </select>
-      </div>
-    </div>
 
-    <div class="field-group">
+      <div class="field-row">
+        <div class="field-group"><label>ขนาดกระดาษ</label>
+          <select id="printSize">
+            <option value="a4" selected>A4</option>
+            <option value="a3">A3 (Gantt ใหญ่)</option>
+          </select>
+        </div>
+        <div class="field-group"><label>แนวกระดาษ</label>
+          <select id="printOrient">
+            <option value="landscape" selected>แนวนอน</option>
+            <option value="portrait">แนวตั้ง</option>
+          </select>
+        </div>
+      </div>
+
       <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;">
         <input type="checkbox" id="printPreview" style="width:auto;">
-        <span>👁 ดู preview ก่อนพิมพ์ (แนะนำสำหรับครั้งแรก)</span>
+        <span>👁 Preview ก่อนพิมพ์</span>
       </label>
-    </div>
 
-    <div style="background:var(--bg3);padding:8px 12px;border-radius:6px;font-size:10px;color:var(--text2);line-height:1.6;margin-bottom:8px;">
-      <strong>⚙️ เคล็ดลับ print dialog:</strong><br>
-      • <strong>More settings</strong> → <strong>"Background graphics"</strong> ✓ — เพื่อให้สี Gantt bars พิมพ์ออก<br>
-      • <strong>Scale</strong>: "Default" (100%) หรือ "Fit to page width" ถ้ากว้างเกิน<br>
-      • <strong>Margins</strong>: "Default" หรือ "Minimum" สำหรับ Gantt
-    </div>
+      <div style="background:var(--bg3);padding:8px 12px;border-radius:6px;font-size:10px;color:var(--text2);line-height:1.6;margin-top:10px;">
+        <strong>⚙ เคล็ดลับ print dialog:</strong><br>
+        • <strong>"Background graphics"</strong> ✓ — เพื่อสี Gantt bars พิมพ์ออก<br>
+        • <strong>"More settings → Margins: None or Minimum"</strong> — ให้กว้างเต็มหน้า
+      </div>
 
-    <div class="modal-actions">
-      <button class="btn" onclick="closeModal()">ยกเลิก</button>
-      <button class="btn btn-primary" onclick="doPrintPdf()" style="background:linear-gradient(135deg, var(--green), #2d8a3e);border-color:var(--green);">🖨 พิมพ์ / Save PDF</button>
-    </div>`);
+      <div class="modal-actions">
+        <button class="btn" onclick="closeModal()">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="doPrintPdfCustom()" style="background:linear-gradient(135deg, var(--green), #2d8a3e);border-color:var(--green);">🖨 พิมพ์ตามที่เลือก</button>
+      </div>
+    </details>`);
+
+  // Wire up preset cards
+  setTimeout(() => {
+    document.querySelectorAll('.print-preset-card').forEach(card => {
+      card.addEventListener('mouseenter', () => {
+        card.style.borderColor = 'var(--accent)';
+        card.style.background = 'rgba(240,180,41,0.05)';
+      });
+      card.addEventListener('mouseleave', () => {
+        card.style.borderColor = 'var(--border)';
+        card.style.background = '';
+      });
+      card.addEventListener('click', () => {
+        const target = card.dataset.target;
+        closeModal();
+        // Default: landscape A4 (or auto-detect A3 for Gantt)
+        const size = (target === 'plan-gantt' || target === 'plan-scurve') ? 'a3' : 'a4';
+        const orient = 'landscape';
+        doPrintPdfDirect(target, size, orient, false);
+      });
+    });
+  }, 50);
 }
 
-function doPrintPdf() {
+function doPrintPdfCustom() {
   const target = document.getElementById('printTarget').value;
   const size = document.getElementById('printSize').value;
   const orient = document.getElementById('printOrient').value;
   const preview = document.getElementById('printPreview').checked;
   closeModal();
+  doPrintPdfDirect(target, size, orient, preview);
+}
 
-  // Switch to the target page/tab before printing
+function doPrintPdfDirect(target, size, orient, preview) {
+  // Special handling: weekly-materials = isolate to ONLY the weekly summary card
   switchToPrintTarget(target);
 
-  // Apply page size class to body for @page rules
-  document.body.classList.remove('print-a3','print-portrait','print-a3-portrait');
-  if (size === 'a3' && orient === 'landscape') document.body.classList.add('print-a3');
-  else if (size === 'a3' && orient === 'portrait') document.body.classList.add('print-a3-portrait');
-  else if (size === 'a4' && orient === 'portrait') document.body.classList.add('print-portrait');
+  // Inject @page for orientation
+  const oldStyle = document.getElementById('dynamicPrintPageStyle');
+  if (oldStyle) oldStyle.remove();
+  const pageStyle = document.createElement('style');
+  pageStyle.id = 'dynamicPrintPageStyle';
+  pageStyle.textContent = `@page { size: ${size.toUpperCase()} ${orient}; margin: 6mm 5mm; }`;
+  document.head.appendChild(pageStyle);
+
+  document.body.classList.add('print-fit-width');
+
+  // Special class for weekly-materials only (hide other cards in materials page)
+  if (target === 'weekly-materials') {
+    document.body.classList.add('print-weekly-only');
+  }
+
+  const cleanup = () => {
+    document.body.classList.remove('print-fit-width','print-weekly-only','print-preview');
+    const ps = document.getElementById('dynamicPrintPageStyle');
+    if (ps) ps.remove();
+    const eb = document.getElementById('exitPrintPreview');
+    if (eb) eb.remove();
+    const pb = document.getElementById('previewPrintBtn');
+    if (pb) pb.remove();
+  };
 
   if (preview) {
-    // Show preview mode — user can review on screen, then press Ctrl+P themselves
     document.body.classList.add('print-preview');
     const exitBtn = document.createElement('button');
     exitBtn.id = 'exitPrintPreview';
     exitBtn.textContent = '✕ ออกจาก Preview';
     exitBtn.style.cssText = 'position:fixed;top:10px;right:10px;z-index:9999;padding:8px 14px;background:#fff;border:2px solid #333;border-radius:6px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
-    exitBtn.onclick = () => {
-      document.body.classList.remove('print-preview','print-a3','print-portrait','print-a3-portrait');
-      exitBtn.remove();
-      const printBtn = document.getElementById('previewPrintBtn');
-      if (printBtn) printBtn.remove();
-    };
+    exitBtn.onclick = cleanup;
     document.body.appendChild(exitBtn);
 
     const printBtn = document.createElement('button');
@@ -7453,36 +7686,31 @@ function doPrintPdf() {
     printBtn.onclick = () => window.print();
     document.body.appendChild(printBtn);
 
-    toast('👁 อยู่ในโหมด Preview — เลื่อนตรวจดู แล้วกด "พิมพ์ตอนนี้" หรือ Ctrl+P');
+    toast(`👁 Preview · ${size.toUpperCase()} ${orient}`);
   } else {
-    // Direct print
     setTimeout(() => {
       window.print();
-      // Cleanup after print dialog closes
-      setTimeout(() => {
-        document.body.classList.remove('print-a3','print-portrait','print-a3-portrait');
-      }, 1000);
+      setTimeout(cleanup, 1500);
     }, 200);
   }
 }
 
 function switchToPrintTarget(target) {
-  // Switch sidebar nav + page
   let pageId = target;
   let tabId = null;
-  if (target.startsWith('plan-')) {
+  if (target === 'weekly-materials') {
+    pageId = 'plan';
+    tabId = 'materials';
+  } else if (target.startsWith('plan-')) {
     pageId = 'plan';
     tabId = target.replace('plan-','');
   }
-  // Activate nav item
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const navItem = document.querySelector(`[data-page="${pageId}"]`);
   if (navItem) navItem.classList.add('active');
-  // Activate page
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const page = document.getElementById('page-' + pageId);
   if (page) page.classList.add('active');
-  // Activate plan tab if needed
   if (tabId && typeof setPlanTab === 'function') {
     setPlanTab(tabId);
   } else if (typeof renderAll === 'function') {
