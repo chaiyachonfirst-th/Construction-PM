@@ -423,12 +423,35 @@ tr.wbs-lv3 td.item-cell::before {
   border-radius:6px;
   background:var(--bg);
   -webkit-overflow-scrolling:touch;
+  /* Stop scroll from triggering pull-to-refresh on mobile */
+  overscroll-behavior-x: contain;
+  position:relative;
 }
 .gantt-table {
   border-collapse:separate;
   border-spacing:0;
   font-size:10px;
   table-layout:fixed;
+}
+
+/* STICKY info columns — task name doesn't get covered when scrolling horizontally */
+.gantt-table .info-col {
+  position:sticky;
+  z-index:5;
+  background:var(--bg2) !important;
+}
+.gantt-table .col-no { left:0; min-width:32px; max-width:32px; }
+.gantt-table .col-name { left:32px; min-width:280px; max-width:340px; }
+.gantt-table .col-start { left:312px; min-width:78px; max-width:90px; }
+.gantt-table .col-finish { left:390px; min-width:78px; max-width:90px; }
+.gantt-table .col-pct { left:468px; min-width:54px; max-width:54px; }
+/* Header sticky on top + left */
+.gantt-table thead .info-col { z-index:10; background:var(--bg3) !important; }
+.gantt-table thead th { position:sticky; top:0; z-index:6; background:var(--bg3); }
+.gantt-table thead .info-col[colspan] { z-index:11; }
+/* Border between sticky and scrolling area */
+.gantt-table .col-pct, .gantt-table .col-finish:not(.col-pct + .col-finish) {
+  border-right:2px solid var(--border) !important;
 }
 .gantt-table th, .gantt-table td {
   border-right:1px solid var(--border);
@@ -515,11 +538,17 @@ tr.wbs-lv3 td.item-cell::before {
 .gantt-table th.day-header.weekend, .gantt-table td.day-cell.weekend { background:rgba(248,81,73,0.06); }
 .gantt-table th.day-header.weekend { color:var(--red); }
 .gantt-table th.day-header.today, .gantt-table td.day-cell.today {
-  background:rgba(240,180,41,0.18); color:var(--accent); font-weight:700;
+  background:#c62828 !important;
+  color:#fff !important;
+  font-weight:700 !important;
 }
 .gantt-table th.day-header.today {
-  box-shadow:inset 0 -3px 0 0 var(--accent);
+  background:#a01818 !important;
+  color:#fff !important;
 }
+/* Override bar colors when on today column — make sure bar still readable */
+.gantt-table td.day-cell.bar.today { background:#c62828 !important; color:#fff !important; }
+.gantt-table td.day-cell.today.weekend { background:#c62828 !important; }
 
 /* Bar cells (filled days within plan range) */
 .gantt-table td.day-cell.bar {
@@ -529,6 +558,7 @@ tr.wbs-lv3 td.item-cell::before {
 .gantt-table td.day-cell.bar.status-progress { background:var(--accent); color:#1a1a1a; }
 .gantt-table td.day-cell.bar.status-done { background:var(--green); }
 .gantt-table td.day-cell.bar.status-late { background:var(--red); }
+.gantt-table td.day-cell.bar.status-blocked { background:#b00020; color:#fff; background-image:repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.15) 4px, rgba(255,255,255,0.15) 8px); }
 .gantt-table td.day-cell.bar.critical { background:var(--red); }
 .gantt-table tr.sub-row td.day-cell.bar.status-pending { background:rgba(88,166,255,0.65); color:#fff; }
 .gantt-table tr.sub-row td.day-cell.bar.status-progress { background:rgba(240,180,41,0.75); color:#1a1a1a; }
@@ -571,6 +601,50 @@ tr.wbs-lv3 td.item-cell::before {
   border-radius:1px;
 }
 .gantt-table td.day-cell { position:relative; }
+
+/* Draw mode: highlight task & sub-task names as clickable */
+body.gantt-draw-mode .gantt-table .col-name {
+  cursor:pointer !important;
+  background:rgba(63,185,80,0.08) !important;
+}
+body.gantt-draw-mode .gantt-table .col-name:hover {
+  background:rgba(63,185,80,0.25) !important;
+  outline:2px solid var(--green) !important;
+  outline-offset:-2px;
+}
+body.gantt-draw-mode .gantt-table tr.sub-row .col-name {
+  background:rgba(63,185,80,0.05) !important;
+}
+.gantt-table .draw-task-selected,
+.gantt-table .col-name.draw-task-selected {
+  background:rgba(63,185,80,0.4) !important;
+  outline:3px solid var(--green) !important;
+  outline-offset:-3px;
+  font-weight:700 !important;
+}
+
+/* Shift mode: highlight task names as multi-selectable */
+body.gantt-shift-mode .gantt-table .col-name {
+  cursor:pointer !important;
+  background:rgba(140,82,255,0.08) !important;
+}
+body.gantt-shift-mode .gantt-table .col-name:hover {
+  background:rgba(140,82,255,0.25) !important;
+  outline:2px solid #8c52ff !important;
+  outline-offset:-2px;
+}
+.gantt-table .shift-task-selected,
+.gantt-table .col-name.shift-task-selected {
+  background:rgba(140,82,255,0.4) !important;
+  outline:3px solid #8c52ff !important;
+  outline-offset:-3px;
+  font-weight:700 !important;
+}
+/* shift bars preview */
+td.day-cell.shift-preview {
+  background:rgba(140,82,255,0.45) !important;
+  outline:2px solid #8c52ff;
+}
 
 /* Click hint on day cells */
 .gantt-table td.mw-cell:hover {
@@ -629,6 +703,7 @@ tr.wbs-lv3 td.item-cell::before {
 .status-badge.progress { background:rgba(240,180,41,.15); color:var(--accent); border:1px solid var(--accent); }
 .status-badge.done { background:rgba(63,185,80,.15); color:var(--green); border:1px solid var(--green); }
 .status-badge.late { background:rgba(248,81,73,.15); color:var(--red); border:1px solid var(--red); }
+.status-badge.blocked { background:rgba(176,0,32,.18); color:#ff5252; border:1px solid #b00020; font-weight:700; }
 
 /* 3-Week view */
 .week-grid {
@@ -742,6 +817,16 @@ body.print-mode-a4-landscape ~ * { /* placeholder for spec specificity */ }
    ══════════════════════════════════════════════════════════════ */
 @media print {
 
+  /* Print banner — visible only when printing */
+  #printBanner {
+    display:block !important;
+    background:#fff !important;
+    color:#000 !important;
+    padding:0 !important;
+    margin-bottom:4mm !important;
+    page-break-after:avoid;
+  }
+
   /* Force light theme for print — สีดำ-ขาว readable ทุก printer */
   :root, :root[data-theme="dark"], :root[data-theme="light"] {
     --bg:#ffffff !important; --bg2:#ffffff !important; --bg3:#f5f5f5 !important; --bg4:#eaeaea !important;
@@ -760,25 +845,68 @@ body.print-mode-a4-landscape ~ * { /* placeholder for spec specificity */ }
   /* Hide UI chrome */
   .sidebar, .topbar-actions, .nav-item, .tabs, #floatingUtils,
   #planFileInput, #importFile, .modal-backdrop, .modal,
-  .week-add-row, .week-add-cell,           /* hide + sub-task buttons */
-  button, .btn, .btn-sm,                    /* hide all buttons */
-  .ptab-pane:not(.print-target),            /* hide non-active tabs */
+  #modalOverlay, #toastBox,
+  .week-add-row, .week-add-cell,
+  button, .btn, .btn-sm,
   #ganttDrawHelp,
-  #toastBox,
+  #ganttShiftHelp,
+  .no-print-3week,                           /* V7.2: hide 3-week summary cards in print */
   .kpi-delta,
+  .kpi-grid,                                 /* hide all KPI cards during print */
+  #planKpi, #dashKpi, #inspKpi,             /* explicit hide KPI containers */
+  #projectManageList,                        /* hide "จัดการโครงการ" footer */
+  #projectManageList + *, .topbar,           /* hide topbar (page title + buttons) */
   [data-no-print]
   { display:none !important; }
+  /* Show only the print-section we want — selective override below */
+  body.print-keep-topbar .topbar { display:flex !important; flex-direction:column !important; border:none !important; padding:0 0 4mm 0 !important; }
+  body.print-keep-topbar .topbar-actions { display:none !important; }
+  body.print-keep-topbar .topbar .page-title,
+  body.print-keep-topbar .topbar .page-sub { display:block !important; }
 
   .main { margin-left:0 !important; padding:0 !important; width:100% !important; max-width:none !important; }
   .app { display:block !important; width:100% !important; max-width:none !important; }
   .page { width:100% !important; max-width:none !important; padding:0 !important; margin:0 !important; }
-  /* Wide content (Gantt tables) — force to fill page width via scale transform */
-  body.print-fit-width .gantt-wrap { width:100% !important; overflow:visible !important; }
-  body.print-fit-width .gantt-table { width:100% !important; table-layout:fixed; }
+
+  /* ─── CRITICAL: kill overflow/height limits on ALL containers during print ─── */
+  /* Without this, anything inside scroll containers (Gantt, tables) gets clipped */
+  .gantt-wrap, .table-wrap, .ptab-pane, .card, .page {
+    overflow:visible !important;
+    max-height:none !important;
+    height:auto !important;
+  }
+  .gantt-wrap { border:none !important; }
+  body, html {
+    overflow:visible !important;
+    max-height:none !important;
+    height:auto !important;
+  }
+  .gantt-table { width:100% !important; table-layout:auto !important; }
+  /* Ensure no element is set to display:none accidentally on active content */
+  .page.active, .ptab-pane.active { display:block !important; }
+  /* Show ALL tab panes inside the active page when printing
+     (the active tab is what user wants, but if not active, force show too) */
+  .ptab-pane { display:block !important; }
 
   /* Show only the active page */
   .page:not(.active) { display:none !important; }
   .page.active { display:block !important; padding:0 !important; }
+
+  /* CRITICAL: ptab-pane uses inline style="display:none"
+     These selectors with high specificity force show the .active one + hide others */
+  div.ptab-pane.active { display:block !important; }
+  div.ptab-pane:not(.active) { display:none !important; }
+  /* The setPlanTab() may not have added .active class yet — handle by ID-based selectors */
+  body.print-target-gantt #ptab-gantt,
+  body.print-target-list #ptab-list,
+  body.print-target-3week #ptab-3week,
+  body.print-target-scurve #ptab-scurve,
+  body.print-target-materials #ptab-materials { display:block !important; }
+  body.print-target-gantt .ptab-pane:not(#ptab-gantt),
+  body.print-target-list .ptab-pane:not(#ptab-list),
+  body.print-target-3week .ptab-pane:not(#ptab-3week),
+  body.print-target-scurve .ptab-pane:not(#ptab-scurve),
+  body.print-target-materials .ptab-pane:not(#ptab-materials) { display:none !important; }
 
   .topbar { padding:0 0 8mm 0 !important; border-bottom:2px solid #000 !important; margin-bottom:6mm !important; }
   .page-title { font-size:18pt !important; font-weight:700 !important; color:#000 !important; }
@@ -799,27 +927,47 @@ body.print-mode-a4-landscape ~ * { /* placeholder for spec specificity */ }
   .kpi-accent { display:none !important; }
 
   /* Tables */
-  .table-wrap { overflow:visible !important; border:none !important; }
   table { border-collapse:collapse !important; width:100% !important; font-size:8pt !important; page-break-inside:auto; }
   thead { display:table-header-group; }
   tr { page-break-inside:avoid; page-break-after:auto; }
   th, td { border:0.5pt solid #999 !important; padding:1.5mm 2mm !important; color:#000 !important; }
   th { background:#e8e8e8 !important; font-weight:700; }
   tr.cat-row, tr.phase-row { background:#d0d0d0 !important; font-weight:700; }
+  .table-wrap { overflow:visible !important; border:none !important; }
+
+  /* Materials table — hide vendor + task + action columns; expand material name */
+  #materialTable th:nth-child(10), #materialTable td:nth-child(10),
+  #materialTable th:nth-child(11), #materialTable td:nth-child(11),
+  #materialTable th:nth-child(13), #materialTable td:nth-child(13)
+  { display:none !important; }
+  #materialTable th:nth-child(2), #materialTable td:nth-child(2) {
+    width:auto !important; min-width:65mm !important; max-width:none !important;
+    white-space:normal !important; word-break:break-word; font-size:10pt !important; font-weight:600;
+  }
+  #materialTable th, #materialTable td { font-size:9pt !important; padding:2mm 2mm !important; }
+  #materialTable input { border:none !important; background:transparent !important; padding:0 !important; font-size:9pt !important; color:#000 !important; width:auto !important; }
+  #materialTable select { border:none !important; background:transparent !important; -webkit-appearance:none; appearance:none; }
 
   /* Gantt table — most complex */
-  .gantt-table { font-size:7pt !important; }
-  .gantt-table th, .gantt-table td { padding:0.8mm 1mm !important; border:0.3pt solid #aaa !important; }
+  .gantt-table { font-size:7pt !important; width:100% !important; table-layout:auto !important; }
+  .gantt-table th, .gantt-table td { padding:0.8mm 1mm !important; border:0.3pt solid #aaa !important; word-break:break-word !important; }
   .gantt-table .info-col { background:#f0f0f0 !important; }
-  .gantt-table .col-name { font-size:7.5pt !important; font-weight:600; }
-  .gantt-table td.day-cell { height:auto !important; min-height:4mm; font-size:6pt !important; }
+  .gantt-table .col-no { width:18pt !important; min-width:18pt !important; }
+  .gantt-table .col-name { font-size:7.5pt !important; font-weight:600; min-width:60pt !important; max-width:140pt !important; white-space:normal !important; }
+  .gantt-table .col-start, .gantt-table .col-finish { width:38pt !important; min-width:38pt !important; font-size:6.5pt !important; white-space:nowrap !important; }
+  .gantt-table .col-pct { width:28pt !important; min-width:28pt !important; }
+  .gantt-table td.day-cell { height:auto !important; min-height:4mm; font-size:6pt !important; min-width:auto !important; width:auto !important; }
+  /* Force colgroup to be ignored — let table-layout:auto do its job */
+  .gantt-table colgroup col { width:auto !important; }
   .gantt-table td.day-cell.bar { color:#fff !important; font-weight:700; }
   .gantt-table td.day-cell.bar.status-pending { background:#1565c0 !important; }
   .gantt-table td.day-cell.bar.status-progress { background:#cc8800 !important; color:#000 !important; }
   .gantt-table td.day-cell.bar.status-done { background:#1a7f37 !important; }
   .gantt-table td.day-cell.bar.status-late { background:#c62828 !important; }
+  .gantt-table td.day-cell.bar.status-blocked { background:#7a0019 !important; color:#fff !important; }
   .gantt-table td.day-cell.bar.critical { background:#c62828 !important; }
-  .gantt-table td.day-cell.today { box-shadow: inset 0 0 0 2px #ff9800 !important; }
+  /* User requested: no gold/orange frame around today's date in print */
+  .gantt-table td.day-cell.today { box-shadow: none !important; }
   .gantt-table td.day-cell.has-material { box-shadow: inset 0 0 0 2px #cc8800 !important; }
 
   /* Charts (Chart.js canvas) — fit page width */
@@ -852,6 +1000,21 @@ body.print-preview .page.active { background:#fff; min-height:100vh; padding:20m
 </style>
 </head>
 <body>
+
+<!-- Print banner — shows ONLY when printing (project name + report date + page #) -->
+<div id="printBanner" style="display:none;">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:2pt solid #000;padding-bottom:3mm;margin-bottom:5mm;">
+    <div>
+      <div id="printBannerTitle" style="font-size:16pt;font-weight:700;color:#000;">รายงาน</div>
+      <div id="printBannerSub" style="font-size:10pt;color:#444;margin-top:1mm;">รายละเอียด</div>
+    </div>
+    <div style="text-align:right;font-size:9pt;color:#444;">
+      <div id="printBannerDate" style="font-weight:600;">วันที่พิมพ์: </div>
+      <div id="printBannerProject" style="margin-top:1mm;font-style:italic;"></div>
+    </div>
+  </div>
+</div>
+
 <div class="app">
 
 <aside class="sidebar">
@@ -876,6 +1039,7 @@ body.print-preview .page.active { background:#fff; min-height:100vh; padding:20m
 
   <div class="nav-group-label">📑 รายงาน</div>
   <div class="nav-item" data-page="reports"><span class="nav-icon">◎</span><span>Reports</span></div>
+  <div class="nav-item" data-page="inspections"><span class="nav-icon">📋</span><span>ตรวจงาน</span></div>
   <div style="margin-top:24px;padding:0 20px;font-size:10px;color:var(--text3);border-top:1px solid var(--border);padding-top:16px;">
     <div style="margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Settings</div>
     <button class="btn btn-sm" id="themeToggle" style="width:100%;margin-bottom:6px;">◑ Theme</button>
@@ -990,11 +1154,8 @@ body.print-preview .page.active { background:#fff; min-height:100vh; padding:20m
             <button class="zoom-btn" data-zoom="week" onclick="setGanttZoom('week')">Week</button>
             <button class="zoom-btn" data-zoom="month" onclick="setGanttZoom('month')">Month</button>
           </div>
-          <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;margin-left:8px;">
-            <input type="checkbox" id="ganttShowSub" onchange="toggleGanttShowSub(this.checked)" style="width:auto;">
-            แสดง sub-task
-          </label>
           <button class="btn btn-sm" id="ganttDrawModeBtn" onclick="toggleGanttDrawMode()" style="margin-left:8px;" title="เปิด/ปิดโหมดวาดช่วงวัน">✏️ Draw Mode</button>
+          <button class="btn btn-sm" id="ganttShiftModeBtn" onclick="toggleGanttShiftMode()" style="margin-left:4px;" title="โหมดเลื่อนหลาย task พร้อมกัน">🔀 Shift Mode</button>
           <span class="text-xs text-muted" style="margin-left:12px;">
             <span class="legend-dot" style="background:var(--blue);"></span>รอเริ่ม
             <span class="legend-dot" style="background:var(--accent);margin-left:8px;"></span>กำลังทำ
@@ -1004,11 +1165,8 @@ body.print-preview .page.active { background:#fff; min-height:100vh; padding:20m
           </span>
         </div>
       </div>
-      <div id="ganttDrawHelp" style="display:none;background:rgba(63,185,80,0.1);padding:8px 12px;border-left:4px solid var(--green);margin-bottom:8px;border-radius:4px;font-size:11px;">
-        ✏️ <strong>โหมดวาดเปิดอยู่</strong> — เลือก Task ด้านล่าง แล้ว <strong>กดค้าง-ลาก</strong> ในเซลล์ Gantt เพื่อกำหนดช่วง planStart→planEnd ใหม่
-        <select id="ganttDrawTaskSel" style="margin-left:8px;width:auto;font-size:11px;padding:2px 6px;" onchange="window._drawTaskId=this.value;"></select>
-        <button class="btn btn-sm" onclick="toggleGanttDrawMode()" style="margin-left:8px;">ปิด</button>
-      </div>
+      <div id="ganttDrawHelp" style="display:none;background:rgba(63,185,80,0.1);padding:10px 14px;border-left:4px solid var(--green);margin-bottom:8px;border-radius:4px;font-size:11px;line-height:1.6;"></div>
+      <div id="ganttShiftHelp" style="display:none;background:rgba(140,82,255,0.1);padding:10px 14px;border-left:4px solid #8c52ff;margin-bottom:8px;border-radius:4px;font-size:11px;line-height:1.6;"></div>
       <div id="ganttContainer" class="gantt-wrap"></div>
     </div>
   </div>
@@ -1054,7 +1212,7 @@ body.print-preview .page.active { background:#fff; min-height:100vh; padding:20m
         </div>
       </div>
       <!-- Compact donut + KPI inline -->
-      <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;">
+      <div class="no-print-3week" style="display:flex;gap:12px;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;">
         <div style="background:var(--bg2);padding:10px;border-radius:8px;display:flex;align-items:center;gap:12px;flex:0 0 auto;">
           <div style="width:120px;height:120px;position:relative;flex-shrink:0;"><canvas id="chart3WeekDonut"></canvas></div>
           <div class="text-xs text-muted" style="font-weight:600;">สถานะ<br>Task<br>3 สัปดาห์</div>
@@ -1167,6 +1325,27 @@ body.print-preview .page.active { background:#fff; min-height:100vh; padding:20m
   </div>
 </div>
 
+
+<!-- ─── INSPECTION REPORT ─── -->
+<div class="page" id="page-inspections">
+  <div class="topbar">
+    <div><div class="page-title">📋 รายงานการตรวจงาน</div><div class="page-sub">ประวัติการตรวจ Task / Sub-task ทั้งหมดของโครงการ</div></div>
+    <div class="topbar-actions">
+      <select id="inspProjSel" onchange="renderInspectionReport()" style="width:auto;min-width:220px;"></select>
+      <select id="inspFilter" onchange="renderInspectionReport()" style="width:auto;">
+        <option value="all">ทุกสถานะ</option>
+        <option value="รอ">🕐 รอตรวจ</option>
+        <option value="ตรวจแล้ว">📋 ตรวจแล้ว</option>
+        <option value="ผ่าน">✓ ผ่าน</option>
+        <option value="ไม่ผ่าน">✗ ไม่ผ่าน</option>
+        <option value="เลื่อน">⏳ เลื่อน</option>
+      </select>
+      <button class="btn" onclick="openPrintModal()">🖨 Print / Save PDF</button>
+    </div>
+  </div>
+  <div class="kpi-grid" id="inspKpi"></div>
+  <div class="card mb-md" id="inspectionReport"></div>
+</div>
 
 <!-- ─── REPORTS ─── -->
 <div class="page" id="page-reports">
@@ -1284,11 +1463,24 @@ function getLeadDays(matName) {
   return 3;  // default
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   MASTER_TASK_LIBRARY V7 — บ้าน 2 ชั้น · 68 task · 10 หมวด · ~193 วัน
+   Changes from V6:
+   - Added 6 tasks: PRE-05 (อ.2), ARC1-00 (Mockup), FIN-07 (บิวท์อิน),
+     FIN-08 (เครื่องใช้ไฟฟ้าฝัง), FIN-09 (ภูมิทัศน์), CMS-04 (อ.6)
+   - Fixed CMS-01 main material (was [Lean, เหล็ก] → now [สี, น้ำยาทำความสะอาด])
+   - Shifted ARC1-01 (ก่ออิฐ) from offset 86 → 100 (start after roof complete);
+     all ARC1/ARC2/MEP/FIN/CMS tasks shifted accordingly
+   ═══════════════════════════════════════════════════════════════════ */
 const MASTER_TASK_LIBRARY = [
+  // 1. เตรียมการ (5 task) — NEW: PRE-05
   { code:'PRE-01', category:"1. เตรียมการชั่วคราวและปรับพื้นที่", name:"ยื่นขอน้ำ-ไฟชั่วคราว และเคลียร์พื้นที่", duration:5, offset:0, main:[], unit:'งาน' },
   { code:'PRE-02', category:"1. เตรียมการชั่วคราวและปรับพื้นที่", name:"ปรับระดับดินและบดอัดด้วยเครื่องจักร", duration:3, offset:0, main:[], unit:'งาน' },
   { code:'PRE-03', category:"1. เตรียมการชั่วคราวและปรับพื้นที่", name:"วางผัง ตีผัง และกำหนดจุดศูนย์กลางเข็ม (Offset)", duration:3, offset:3, main:["เชือกตีผัง", "ปูนตีผัง"], unit:'งาน' },
   { code:'PRE-04', category:"1. เตรียมการชั่วคราวและปรับพื้นที่", name:"สร้างแคมป์คนงาน รั้วชั่วคราว และห้องน้ำหน้างาน", duration:5, offset:0, main:["สังกะสีรั้วชั่วคราว", "ไม้แคมป์"], unit:'งาน' },
+  { code:'PRE-05', category:"1. เตรียมการชั่วคราวและปรับพื้นที่", name:"แจ้งเริ่มก่อสร้าง อ.2 และขอเลขที่บ้าน", duration:2, offset:0, main:[], unit:'งาน' },
+
+  // 2. ฐานราก (7 task) — keep V6
   { code:'STR-01', category:"2. โครงสร้างฐานราก (ฐานราก+ตอม่อ+กลบดิน)", name:"งานเสาเข็ม (ตอก/เจาะ) และทดสอบ Seismic Test", duration:10, offset:6, main:["เสาเข็ม"], unit:'งาน' },
   { code:'STR-02', category:"2. โครงสร้างฐานราก (ฐานราก+ตอม่อ+กลบดิน)", name:"ขุดดินหลุมฐานราก และสกัดตัดหัวเสาเข็ม", duration:4, offset:16, main:[], unit:'งาน' },
   { code:'STR-03', category:"2. โครงสร้างฐานราก (ฐานราก+ตอม่อ+กลบดิน)", name:"เท Lean และผูกเหล็กตะแกรงฐานราก", duration:3, offset:20, main:["คอนกรีตหยาบ (Lean)", "เหล็กเส้น"], unit:'งาน' },
@@ -1296,6 +1488,8 @@ const MASTER_TASK_LIBRARY = [
   { code:'STR-05', category:"2. โครงสร้างฐานราก (ฐานราก+ตอม่อ+กลบดิน)", name:"ผูกเหล็กเสาตอม่อ (เริ่มระหว่างบ่มฐานราก)", duration:3, offset:24, main:["เหล็ก DB/RB"], unit:'งาน' },
   { code:'STR-06', category:"2. โครงสร้างฐานราก (ฐานราก+ตอม่อ+กลบดิน)", name:"เข้าแบบและเทคอนกรีตเสาตอม่อ", duration:2, offset:29, main:["ไม้แบบ", "คอนกรีตผสมเสร็จ"], unit:'งาน' },
   { code:'STR-07', category:"2. โครงสร้างฐานราก (ฐานราก+ตอม่อ+กลบดิน)", name:"แกะแบบเสาตอม่อ และถมดินกลับคืนหลุมพร้อมบดอัด", duration:3, offset:34, main:["ไม้แบบ", "คอนกรีตผสมเสร็จ"], unit:'งาน' },
+
+  // 3. ชั้น 1 (9 task) — keep V6
   { code:'STR1-01', category:"3. โครงสร้างชั้น 1", name:"วางระบบท่อกำจัดปลวกใต้แนวคาน", duration:1, offset:37, main:["ท่อปลวก", "ระบบเคมีปลวก"], unit:'งาน' },
   { code:'STR1-02', category:"3. โครงสร้างชั้น 1", name:"ผูกเหล็กคานคอดิน (Ground Beam)", duration:6, offset:32, main:["เหล็ก DB/RB"], unit:'งาน' },
   { code:'STR1-03', category:"3. โครงสร้างชั้น 1", name:"เข้าแบบข้างคานชั้น 1 และค้ำยันให้ได้ระดับ", duration:4, offset:36, main:["ไม้แบบ", "นั่งร้าน"], unit:'งาน' },
@@ -1305,6 +1499,8 @@ const MASTER_TASK_LIBRARY = [
   { code:'STR1-07', category:"3. โครงสร้างชั้น 1", name:"เทคอนกรีตทับหน้าพื้นชั้น 1 (Topping)", duration:2, offset:49, main:["คอนกรีตผสมเสร็จ"], unit:'งาน' },
   { code:'STR1-08', category:"3. โครงสร้างชั้น 1", name:"ผูกเหล็กเสาชั้น 1 (เริ่มระหว่างบ่มคาน)", duration:4, offset:41, main:["เหล็ก DB/RB"], unit:'งาน' },
   { code:'STR1-09', category:"3. โครงสร้างชั้น 1", name:"เข้าแบบและเทคอนกรีตเสาชั้น 1", duration:3, offset:45, main:["ไม้แบบ", "คอนกรีตผสมเสร็จ"], unit:'งาน' },
+
+  // 4. ชั้น 2 (9 task) — keep V6
   { code:'STR2-01', category:"4. โครงสร้างชั้น 2", name:"ตั้งนั่งร้านและค้ำยันรับท้องคานชั้น 2", duration:5, offset:51, main:["นั่งร้าน"], unit:'งาน' },
   { code:'STR2-02', category:"4. โครงสร้างชั้น 2", name:"ผูกเหล็กคานชั้น 2 และคานบันได", duration:7, offset:47, main:["เหล็ก DB/RB"], unit:'งาน' },
   { code:'STR2-03', category:"4. โครงสร้างชั้น 2", name:"เข้าแบบข้างคานชั้น 2 และเช็คระดับ", duration:3, offset:56, main:["ไม้แบบ", "นั่งร้าน"], unit:'งาน' },
@@ -1314,39 +1510,56 @@ const MASTER_TASK_LIBRARY = [
   { code:'STR2-07', category:"4. โครงสร้างชั้น 2", name:"ผูกเหล็กเสาชั้น 2 (เริ่มระหว่างบ่มพื้น)", duration:4, offset:65, main:["เหล็ก DB/RB"], unit:'งาน' },
   { code:'STR2-08', category:"4. โครงสร้างชั้น 2", name:"เข้าแบบและเทคอนกรีตเสาชั้น 2", duration:3, offset:69, main:["ไม้แบบ", "คอนกรีตผสมเสร็จ"], unit:'งาน' },
   { code:'STR2-09', category:"4. โครงสร้างชั้น 2", name:"ผูกเหล็ก เข้าแบบ และเทคอนกรีตบันได", duration:5, offset:68, main:["เหล็กเส้น", "ไม้แบบ", "คอนกรีตผสมเสร็จ"], unit:'งาน' },
+
+  // 5. หลังคา (7 task) — tightened offsets (RF-03 from 86 → 82)
   { code:'STR-RF-01', category:"5. โครงสร้างชั้นหลังคา", name:"ผูกเหล็กคานอะเส (เริ่มระหว่างบ่มเสาชั้น 2)", duration:4, offset:70, main:["เหล็ก DB/RB"], unit:'งาน' },
   { code:'STR-RF-02', category:"5. โครงสร้างชั้นหลังคา", name:"เข้าแบบและเทคอนกรีตคานอะเส (คานรับหลังคา)", duration:4, offset:75, main:["คอนกรีตผสมเสร็จ"], unit:'งาน' },
-  { code:'STR-RF-03', category:"5. โครงสร้างชั้นหลังคา", name:"ติดตั้งโครงหลังคาเหล็ก (จันทัน/อกไก่/แป) และเก็บงานเชื่อม", duration:10, offset:86, main:["เหล็กรูปพรรณ (C-Channel/แป)"], unit:'งาน' },
-  { code:'STR-RF-04', category:"5. โครงสร้างชั้นหลังคา", name:"ทาสีกันสนิมรอบรอยเชื่อม และติดตั้งไม้เชิงชาย", duration:4, offset:96, main:["สีกันสนิม", "ไม้เชิงชาย"], unit:'งาน' },
-  { code:'STR-RF-05', category:"5. โครงสร้างชั้นหลังคา", name:"ติดตั้งแผ่นสะท้อนความร้อนและมุงวัสดุหลังคา", duration:5, offset:100, main:["แผ่นสะท้อนความร้อน", "แผ่นหลังคา CPAC"], unit:'งาน' },
-  { code:'STR-RF-06', category:"5. โครงสร้างชั้นหลังคา", name:"ติดตั้งครอบสันหลังคา และเก็บงานกันซึม", duration:3, offset:105, main:["ครอบสันหลังคา"], unit:'งาน' },
-  { code:'STR-RF-07', category:"5. โครงสร้างชั้นหลังคา", name:"งานกันซึมกันสาด/ดาดฟ้า (ถ้ามี)", duration:4, offset:108, main:["น้ำยากันซึม"], unit:'งาน' },
-  { code:'ARC1-01', category:"6. สถาปัตยกรรม ชั้น 1", name:"ก่ออิฐผนังชั้น 1 (รวมเสาเอ็นและคานทับหลัง)", duration:15, offset:86, main:["อิฐ (มวลเบา/มอญ)", "ปูนก่อ"], unit:'งาน' },
-  { code:'ARC1-02', category:"6. สถาปัตยกรรม ชั้น 1", name:"กรีดผนังฝังบล็อกและเดินท่อระบบไฟฟ้า/ประปาชั้น 1", duration:7, offset:98, main:["ท่อร้อยสายไฟ", "ท่อ PVC/PPR", "บล็อกฝัง"], unit:'งาน' },
-  { code:'ARC1-03', category:"6. สถาปัตยกรรม ชั้น 1", name:"จับเซี้ยม/จับปุ่ม และฉาบปูนผนังชั้น 1", duration:12, offset:105, main:["ปูนฉาบ"], unit:'งาน' },
-  { code:'ARC1-04', category:"6. สถาปัตยกรรม ชั้น 1", name:"งานกันซึมห้องน้ำชั้น 1 และปูกระเบื้องพื้น-ผนัง", duration:10, offset:117, main:["น้ำยากันซึม", "กระเบื้อง", "ปูนกาว"], unit:'งาน' },
-  { code:'ARC1-05', category:"6. สถาปัตยกรรม ชั้น 1", name:"ติดตั้งโครงคร่าวและแผ่นฝ้าเพดานชั้น 1", duration:8, offset:117, main:["โครงคร่าว C-Line", "แผ่นยิปซัม"], unit:'งาน' },
-  { code:'ARC1-06', category:"6. สถาปัตยกรรม ชั้น 1", name:"ทาสีรองพื้นและสีจริงผนังชั้น 1", duration:7, offset:127, main:["สีรองพื้น", "สีทับหน้า"], unit:'งาน' },
-  { code:'ARC1-07', category:"6. สถาปัตยกรรม ชั้น 1", name:"งานวัสดุปูพื้นชั้น 1 (กระเบื้อง/ลามิเนต)", duration:6, offset:134, main:["SPC/ลามิเนต/กระเบื้อง"], unit:'งาน' },
-  { code:'ARC2-01', category:"7. สถาปัตยกรรม ชั้น 2", name:"ก่ออิฐผนังชั้น 2 (รวมเสาเอ็นและคานทับหลัง)", duration:15, offset:96, main:["อิฐ (มวลเบา/มอญ)", "ปูนก่อ"], unit:'งาน' },
-  { code:'ARC2-02', category:"7. สถาปัตยกรรม ชั้น 2", name:"กรีดผนังและเดินท่อระบบไฟฟ้า/ประปาชั้น 2", duration:7, offset:108, main:["ท่อร้อยสายไฟ", "ท่อ PVC/PPR", "บล็อกฝัง"], unit:'งาน' },
-  { code:'ARC2-03', category:"7. สถาปัตยกรรม ชั้น 2", name:"จับเซี้ยมและฉาบปูนผนังชั้น 2", duration:12, offset:115, main:["ปูนฉาบ"], unit:'งาน' },
-  { code:'ARC2-04', category:"7. สถาปัตยกรรม ชั้น 2", name:"งานกันซึมห้องน้ำชั้น 2 และปูกระเบื้อง", duration:10, offset:127, main:["น้ำยากันซึม", "กระเบื้อง", "ปูนกาว"], unit:'งาน' },
-  { code:'ARC2-05', category:"7. สถาปัตยกรรม ชั้น 2", name:"ติดตั้งโครงคร่าวและแผ่นฝ้าเพดานชั้น 2", duration:10, offset:127, main:["โครงคร่าว C-Line", "แผ่นยิปซัม"], unit:'งาน' },
-  { code:'ARC2-06', category:"7. สถาปัตยกรรม ชั้น 2", name:"ทาสีรองพื้นและสีจริงผนังชั้น 2", duration:7, offset:137, main:["สีรองพื้น", "สีทับหน้า"], unit:'งาน' },
-  { code:'ARC2-07', category:"7. สถาปัตยกรรม ชั้น 2", name:"งานวัสดุปูพื้นชั้น 2 (SPC/ลามิเนต/กระเบื้อง)", duration:5, offset:144, main:["SPC/ลามิเนต/กระเบื้อง"], unit:'งาน' },
-  { code:'MEP-01', category:"8. ระบบ MEP ภายนอก", name:"ติดตั้งถังบำบัด บ่อพัก และเดินท่อระบายน้ำรอบบ้าน", duration:8, offset:117, main:["ถังบำบัด", "ท่อระบายน้ำ"], unit:'งาน' },
-  { code:'MEP-02', category:"8. ระบบ MEP ภายนอก", name:"เดินสายเมนไฟฟ้า ติดตั้งตู้ MDB และมิเตอร์ถาวร", duration:6, offset:125, main:["ตู้ MDB", "สายเมน", "มิเตอร์"], unit:'งาน' },
-  { code:'MEP-03', category:"8. ระบบ MEP ภายนอก", name:"ทดสอบระบบประปา (Hydrostatic) และระบบไฟฟ้า (Megger Test)", duration:3, offset:131, main:[], unit:'งาน' },
-  { code:'FIN-01', category:"9. ติดตั้งอุปกรณ์และเก็บงานสุดท้าย", name:"ติดตั้งกรอบและบานประตู-หน้าต่างอลูมิเนียม", duration:8, offset:140, main:["ชุดประตูหน้าต่างอลูมิเนียม"], unit:'งาน' },
-  { code:'FIN-02', category:"9. ติดตั้งอุปกรณ์และเก็บงานสุดท้าย", name:"ติดตั้งสุขภัณฑ์ห้องน้ำ และระบบน้ำ", duration:6, offset:149, main:["ชักโครก", "อ่างล้างหน้า", "ก๊อกน้ำ"], unit:'งาน' },
-  { code:'FIN-03', category:"9. ติดตั้งอุปกรณ์และเก็บงานสุดท้าย", name:"ติดตั้งดวงโคม สวิตช์ไฟ และตู้โหลดเซ็นเตอร์", duration:5, offset:149, main:["โคมไฟ", "สวิตช์", "ตู้โหลดเซ็นเตอร์"], unit:'งาน' },
-  { code:'FIN-04', category:"9. ติดตั้งอุปกรณ์และเก็บงานสุดท้าย", name:"ติดตั้งราวบันได ราวกันตก", duration:3, offset:149, main:["ราวกันตก"], unit:'งาน' },
-  { code:'FIN-05', category:"9. ติดตั้งอุปกรณ์และเก็บงานสุดท้าย", name:"ทาสีภายนอกอาคาร", duration:7, offset:137, main:["สีรองพื้น", "สีทับหน้า"], unit:'งาน' },
-  { code:'FIN-06', category:"9. ติดตั้งอุปกรณ์และเก็บงานสุดท้าย", name:"งานพื้นนอกอาคาร ทางเดิน รั้วถาวร และประตูรั้ว", duration:10, offset:134, main:["คอนกรีต", "รั้วถาวร", "ประตูรั้ว"], unit:'งาน' },
-  { code:'CMS-01', category:"10. Commissioning และส่งมอบลูกค้า", name:"ทาสีจริงรอบสุดท้าย เก็บงาน Defect และ Big Cleaning", duration:10, offset:155, main:["คอนกรีตหยาบ (Lean)", "เหล็กเส้น"], unit:'งาน' },
-  { code:'CMS-02', category:"10. Commissioning และส่งมอบลูกค้า", name:"ทดสอบระบบรวม Commissioning และเดินเครื่องทดลอง", duration:3, offset:165, main:[], unit:'งาน' },
-  { code:'CMS-03', category:"10. Commissioning และส่งมอบลูกค้า", name:"ตรวจรับและส่งมอบงานลูกค้า (Hand-over)", duration:2, offset:168, main:[], unit:'งาน' },
+  { code:'STR-RF-03', category:"5. โครงสร้างชั้นหลังคา", name:"ติดตั้งโครงหลังคาเหล็ก (จันทัน/อกไก่/แป) และเก็บงานเชื่อม", duration:10, offset:82, main:["เหล็กรูปพรรณ (C-Channel/แป)"], unit:'งาน' },
+  { code:'STR-RF-04', category:"5. โครงสร้างชั้นหลังคา", name:"ทาสีกันสนิมรอบรอยเชื่อม และติดตั้งไม้เชิงชาย", duration:4, offset:92, main:["สีกันสนิม", "ไม้เชิงชาย"], unit:'งาน' },
+  { code:'STR-RF-05', category:"5. โครงสร้างชั้นหลังคา", name:"ติดตั้งแผ่นสะท้อนความร้อนและมุงวัสดุหลังคา", duration:5, offset:96, main:["แผ่นสะท้อนความร้อน", "แผ่นหลังคา CPAC"], unit:'งาน' },
+  { code:'STR-RF-06', category:"5. โครงสร้างชั้นหลังคา", name:"ติดตั้งครอบสันหลังคา และเก็บงานกันซึม", duration:3, offset:101, main:["ครอบสันหลังคา"], unit:'งาน' },
+  { code:'STR-RF-07', category:"5. โครงสร้างชั้นหลังคา", name:"งานกันซึมกันสาด/ดาดฟ้า (ถ้ามี)", duration:4, offset:104, main:["น้ำยากันซึม"], unit:'งาน' },
+
+  // 6. ARC ชั้น 1 (8 task) — NEW: ARC1-00; ARC1-01 shifted 86→100
+  { code:'ARC1-00', category:"6. สถาปัตยกรรม ชั้น 1", name:"ทำ Mockup ตัวอย่างวัสดุ + เจ้าของบ้านอนุมัติ", duration:3, offset:75, main:["ตัวอย่างกระเบื้อง", "ตัวอย่างสี"], unit:'งาน' },
+  { code:'ARC1-01', category:"6. สถาปัตยกรรม ชั้น 1", name:"ก่ออิฐผนังชั้น 1 (รวมเสาเอ็นและคานทับหลัง)", duration:15, offset:100, main:["อิฐ (มวลเบา/มอญ)", "ปูนก่อ"], unit:'งาน' },
+  { code:'ARC1-02', category:"6. สถาปัตยกรรม ชั้น 1", name:"กรีดผนังฝังบล็อกและเดินท่อระบบไฟฟ้า/ประปาชั้น 1", duration:7, offset:112, main:["ท่อร้อยสายไฟ", "ท่อ PVC/PPR", "บล็อกฝัง"], unit:'งาน' },
+  { code:'ARC1-03', category:"6. สถาปัตยกรรม ชั้น 1", name:"จับเซี้ยม/จับปุ่ม และฉาบปูนผนังชั้น 1", duration:12, offset:119, main:["ปูนฉาบ"], unit:'งาน' },
+  { code:'ARC1-04', category:"6. สถาปัตยกรรม ชั้น 1", name:"งานกันซึมห้องน้ำชั้น 1 และปูกระเบื้องพื้น-ผนัง", duration:10, offset:131, main:["น้ำยากันซึม", "กระเบื้อง", "ปูนกาว"], unit:'งาน' },
+  { code:'ARC1-05', category:"6. สถาปัตยกรรม ชั้น 1", name:"ติดตั้งโครงคร่าวและแผ่นฝ้าเพดานชั้น 1", duration:8, offset:131, main:["โครงคร่าว C-Line", "แผ่นยิปซัม"], unit:'งาน' },
+  { code:'ARC1-06', category:"6. สถาปัตยกรรม ชั้น 1", name:"ทาสีรองพื้นและสีจริงผนังชั้น 1", duration:7, offset:141, main:["สีรองพื้น", "สีทับหน้า"], unit:'งาน' },
+  { code:'ARC1-07', category:"6. สถาปัตยกรรม ชั้น 1", name:"งานวัสดุปูพื้นชั้น 1 (กระเบื้อง/ลามิเนต)", duration:6, offset:148, main:["SPC/ลามิเนต/กระเบื้อง"], unit:'งาน' },
+
+  // 7. ARC ชั้น 2 (7 task) — shifted by +14 days
+  { code:'ARC2-01', category:"7. สถาปัตยกรรม ชั้น 2", name:"ก่ออิฐผนังชั้น 2 (รวมเสาเอ็นและคานทับหลัง)", duration:15, offset:110, main:["อิฐ (มวลเบา/มอญ)", "ปูนก่อ"], unit:'งาน' },
+  { code:'ARC2-02', category:"7. สถาปัตยกรรม ชั้น 2", name:"กรีดผนังและเดินท่อระบบไฟฟ้า/ประปาชั้น 2", duration:7, offset:122, main:["ท่อร้อยสายไฟ", "ท่อ PVC/PPR", "บล็อกฝัง"], unit:'งาน' },
+  { code:'ARC2-03', category:"7. สถาปัตยกรรม ชั้น 2", name:"จับเซี้ยมและฉาบปูนผนังชั้น 2", duration:12, offset:129, main:["ปูนฉาบ"], unit:'งาน' },
+  { code:'ARC2-04', category:"7. สถาปัตยกรรม ชั้น 2", name:"งานกันซึมห้องน้ำชั้น 2 และปูกระเบื้อง", duration:10, offset:141, main:["น้ำยากันซึม", "กระเบื้อง", "ปูนกาว"], unit:'งาน' },
+  { code:'ARC2-05', category:"7. สถาปัตยกรรม ชั้น 2", name:"ติดตั้งโครงคร่าวและแผ่นฝ้าเพดานชั้น 2", duration:10, offset:141, main:["โครงคร่าว C-Line", "แผ่นยิปซัม"], unit:'งาน' },
+  { code:'ARC2-06', category:"7. สถาปัตยกรรม ชั้น 2", name:"ทาสีรองพื้นและสีจริงผนังชั้น 2", duration:7, offset:151, main:["สีรองพื้น", "สีทับหน้า"], unit:'งาน' },
+  { code:'ARC2-07', category:"7. สถาปัตยกรรม ชั้น 2", name:"งานวัสดุปูพื้นชั้น 2 (SPC/ลามิเนต/กระเบื้อง)", duration:5, offset:158, main:["SPC/ลามิเนต/กระเบื้อง"], unit:'งาน' },
+
+  // 8. MEP (3 task) — shifted by +14 days
+  { code:'MEP-01', category:"8. ระบบ MEP ภายนอก", name:"ติดตั้งถังบำบัด บ่อพัก และเดินท่อระบายน้ำรอบบ้าน", duration:8, offset:131, main:["ถังบำบัด", "ท่อระบายน้ำ"], unit:'งาน' },
+  { code:'MEP-02', category:"8. ระบบ MEP ภายนอก", name:"เดินสายเมนไฟฟ้า ติดตั้งตู้ MDB และมิเตอร์ถาวร", duration:6, offset:139, main:["ตู้ MDB", "สายเมน", "มิเตอร์"], unit:'งาน' },
+  { code:'MEP-03', category:"8. ระบบ MEP ภายนอก", name:"ทดสอบระบบประปา (Hydrostatic) และระบบไฟฟ้า (Megger Test)", duration:3, offset:145, main:[], unit:'งาน' },
+
+  // 9. FIN (9 task) — shifted; NEW: FIN-07, FIN-08, FIN-09
+  { code:'FIN-01', category:"9. ติดตั้งอุปกรณ์และเก็บงานสุดท้าย", name:"ติดตั้งกรอบและบานประตู-หน้าต่างอลูมิเนียม", duration:8, offset:154, main:["ชุดประตูหน้าต่างอลูมิเนียม"], unit:'งาน' },
+  { code:'FIN-02', category:"9. ติดตั้งอุปกรณ์และเก็บงานสุดท้าย", name:"ติดตั้งสุขภัณฑ์ห้องน้ำ และระบบน้ำ", duration:6, offset:163, main:["ชักโครก", "อ่างล้างหน้า", "ก๊อกน้ำ"], unit:'งาน' },
+  { code:'FIN-03', category:"9. ติดตั้งอุปกรณ์และเก็บงานสุดท้าย", name:"ติดตั้งดวงโคม สวิตช์ไฟ และตู้โหลดเซ็นเตอร์", duration:5, offset:163, main:["โคมไฟ", "สวิตช์", "ตู้โหลดเซ็นเตอร์"], unit:'งาน' },
+  { code:'FIN-04', category:"9. ติดตั้งอุปกรณ์และเก็บงานสุดท้าย", name:"ติดตั้งราวบันได ราวกันตก", duration:3, offset:163, main:["ราวกันตก"], unit:'งาน' },
+  { code:'FIN-05', category:"9. ติดตั้งอุปกรณ์และเก็บงานสุดท้าย", name:"ทาสีภายนอกอาคาร", duration:7, offset:151, main:["สีรองพื้น", "สีทับหน้า"], unit:'งาน' },
+  { code:'FIN-06', category:"9. ติดตั้งอุปกรณ์และเก็บงานสุดท้าย", name:"งานพื้นนอกอาคาร ทางเดิน รั้วถาวร และประตูรั้ว", duration:10, offset:148, main:["คอนกรีต", "รั้วถาวร", "ประตูรั้ว"], unit:'งาน' },
+  { code:'FIN-07', category:"9. ติดตั้งอุปกรณ์และเก็บงานสุดท้าย", name:"งานเฟอร์นิเจอร์บิวท์อิน (ครัว+ตู้)", duration:10, offset:158, main:["ครัวบิวท์อิน", "ตู้บิวท์อิน"], unit:'งาน' },
+  { code:'FIN-08', category:"9. ติดตั้งอุปกรณ์และเก็บงานสุดท้าย", name:"ติดตั้งเครื่องใช้ไฟฟ้าฝัง (เครื่องดูดควัน/เตา)", duration:2, offset:168, main:["เครื่องดูดควัน", "เตาฝัง"], unit:'งาน' },
+  { code:'FIN-09', category:"9. ติดตั้งอุปกรณ์และเก็บงานสุดท้าย", name:"งานภูมิทัศน์ ปูหญ้า ปลูกต้นไม้", duration:5, offset:171, main:["หญ้าปูสนาม", "ต้นไม้/ไม้พุ่ม"], unit:'งาน' },
+
+  // 10. CMS (4 task) — fix CMS-01 material bug; NEW: CMS-04
+  { code:'CMS-01', category:"10. Commissioning และส่งมอบลูกค้า", name:"ทาสีจริงรอบสุดท้าย เก็บงาน Defect และ Big Cleaning", duration:10, offset:173, main:["สีทับหน้า", "น้ำยาทำความสะอาด"], unit:'งาน' },
+  { code:'CMS-02', category:"10. Commissioning และส่งมอบลูกค้า", name:"ทดสอบระบบรวม Commissioning และเดินเครื่องทดลอง", duration:3, offset:183, main:[], unit:'งาน' },
+  { code:'CMS-03', category:"10. Commissioning และส่งมอบลูกค้า", name:"ตรวจรับและส่งมอบงานลูกค้า (Hand-over)", duration:2, offset:186, main:[], unit:'งาน' },
+  { code:'CMS-04', category:"10. Commissioning และส่งมอบลูกค้า", name:"ขอ อ.6 (ใบรับรองการก่อสร้าง)", duration:5, offset:188, main:[], unit:'งาน' },
 ];
 
 /* ─── MATERIAL LIBRARY ─── Unified pool with tags (main / consumable / equipment)
@@ -1875,7 +2088,9 @@ function loadState() {
     p.payments = p.payments || [];
     p.settings = p.settings || { theme:'dark' };
     if (!p.settings.ganttZoom) p.settings.ganttZoom = 'day';
-    if (p.settings.ganttShowSub == null) p.settings.ganttShowSub = true;
+    if (p.settings.ganttShowSub == null) p.settings.ganttShowSub = false;
+    // V7: Layer 3 (sub-tasks) removed — always force off
+    p.settings.ganttShowSub = false;
     if (!p.settings.week3Start) p.settings.week3Start = '';
 
     // Migrate old BOQ actualMat/actualLab → Cost entries (one-time)
@@ -1996,7 +2211,7 @@ function weekStart(d) {
 function projectProgress(proj) {
   const tasks = proj.tasks || [];
   if (tasks.length === 0) return 0;
-  return tasks.reduce((s,t) => s + (+t.actualPct||0), 0) / tasks.length;
+  return tasks.reduce((s,t) => s + computeActualPct(t), 0) / tasks.length;
 }
 
 function plannedProgressAt(proj, dateStr) {
@@ -2017,20 +2232,50 @@ function plannedProgressAt(proj, dateStr) {
   return plannedSum / tasks.length;
 }
 
-// Compute task status (auto)
+/* Auto-compute actualPct from actualStart + actualEnd (replaces manual entry) */
+function computeActualPct(item) {
+  if (!item) return 0;
+  // If explicitly marked done → 100%
+  if (item.done) return 100;
+  // If has actualStart + actualEnd → assume complete (user entered both = done)
+  if (item.actualStart && item.actualEnd) return 100;
+  // If item is marked in-progress with a manual %, use that
+  if (item.inProgress && (+item.actualPct >= 0)) return Math.min(100, Math.max(0, +item.actualPct || 0));
+  // If only actualStart → compute % based on time passed vs plan
+  if (item.actualStart && item.planStart && item.planEnd) {
+    const td = today();
+    if (td < item.actualStart) return 0;
+    const totalDays = daysBetween(item.planStart, item.planEnd) || 1;
+    const passedDays = daysBetween(item.actualStart, td);
+    const pct = Math.min(100, Math.max(0, (passedDays / totalDays) * 100));
+    return pct;
+  }
+  // Fallback: use stored value if any (backward compat for old data)
+  return +item.actualPct || 0;
+}
+
+// Compute task status (auto) — V7.2: includes 'blocked' (ติดปัญหา)
 function taskStatus(t) {
-  const ap = +t.actualPct || 0;
+  // Blocked overrides everything except done
+  if (t.blocked && !t.actualEnd) return 'blocked';
+  const ap = computeActualPct(t);
   if (ap >= 100) return 'done';
+  // Manual in-progress flag → progress regardless of date
+  if (t.inProgress && ap < 100) {
+    const td = today();
+    if (td > t.planEnd) return 'late';
+    return 'progress';
+  }
   const td = today();
   if (ap > 0 && td <= t.planEnd) return 'progress';
   if (td > t.planEnd && ap < 100) return 'late';
   return 'pending';
 }
 
-// Compute sub-task status (auto) — same logic as task
+// Compute sub-task status (auto)
 function subTaskStatus(st) {
   if (st.done) return 'done';
-  const ap = +st.actualPct || 0;
+  const ap = computeActualPct(st);
   if (ap >= 100) return 'done';
   const td = today();
   if (!st.planEnd) return 'pending';
@@ -2125,7 +2370,7 @@ function renderDashboard() {
     <div class="kpi"><div class="kpi-accent" style="background:var(--blue);"></div>
       <div class="kpi-label">งานทั้งหมด</div>
       <div class="kpi-value">${totalTasks}<span class="kpi-unit"> tasks</span></div>
-      <div class="kpi-delta">+${totalSubTasks} sub-tasks</div></div>
+      <div class="kpi-delta">${projs.length} โครงการ</div></div>
     <div class="kpi"><div class="kpi-accent" style="background:var(--red);"></div>
       <div class="kpi-label">งาน Critical / ล่าช้า</div>
       <div class="kpi-value">${criticalTasks}<span class="kpi-unit"> CRIT</span></div>
@@ -2171,7 +2416,7 @@ function renderDashboard() {
           <div class="task-progress-actual" style="width:${prog}%;background:${p.color};"></div>
           <div class="task-progress-label">จริง ${prog.toFixed(0)}% / แผน ${plan.toFixed(0)}%</div></div>
         <div class="flex-between text-xs mt-sm" style="border-top:1px solid var(--border);padding-top:8px;">
-          <span class="text-muted">งาน</span><span class="mono">${tasks} task · ${subs} sub${lateT>0?` · <span class="text-red">${lateT} ล่าช้า</span>`:''}</span></div>
+          <span class="text-muted">งาน</span><span class="mono">${tasks} task${lateT>0?` · <span class="text-red">${lateT} ล่าช้า</span>`:''}</span></div>
         <div class="flex-between text-xs">
           <span class="text-muted">วัสดุรอสั่ง</span><span class="mono ${mats>0?'text-bold':''}" style="${mats>0?'color:var(--orange);':''}">${mats} รายการ</span></div>
         <div class="flex-between text-xs">
@@ -2324,35 +2569,44 @@ function toggleGanttShowSub(show) {
 
 /* ─── Gantt Draw Mode — click-and-drag to set task date range ─── */
 function toggleGanttDrawMode() {
+  // Auto-close Shift Mode if open
+  if (window._ganttShiftMode) toggleGanttShiftMode();
   window._ganttDrawMode = !window._ganttDrawMode;
   const btn = document.getElementById('ganttDrawModeBtn');
   const help = document.getElementById('ganttDrawHelp');
   if (window._ganttDrawMode) {
-    if (btn) { btn.classList.add('btn-primary'); btn.innerHTML = '✏️ Draw ON'; }
-    if (help) help.style.display = 'block';
-    populateDrawTaskSelector();
+    if (btn) { btn.classList.add('btn-primary'); btn.innerHTML = '✏️ Draw ON'; btn.style.background = 'var(--green)'; }
+    if (help) {
+      help.style.display = 'block';
+      help.innerHTML = `<strong>✏️ โหมดวาดเปิด</strong> — <strong>คลิกที่ชื่อ Task</strong> ด้านซ้ายมือ (จะเปลี่ยนเป็นไฮไลท์เขียว) → แล้ว <strong>ลากในเซลล์</strong> วันที่ใน Gantt เพื่อกำหนด planStart → planEnd ใหม่
+        <span id="drawSelectedTask" style="margin-left:8px;padding:3px 10px;background:rgba(63,185,80,0.2);border:1px solid var(--green);border-radius:4px;color:var(--green);font-weight:700;font-size:11px;">ยังไม่ได้เลือก Task</span>
+        <button class="btn btn-sm" onclick="toggleGanttDrawMode()" style="margin-left:8px;">ปิด</button>`;
+    }
     setupGanttDragHandlers();
-    toast('✏️ โหมดวาดเปิด — เลือก Task แล้วลาก');
+    toast('✏️ โหมดวาดเปิด — คลิกชื่อ Task ด้านซ้าย แล้วลากในเซลล์');
+    // Add visual class to body so CSS can highlight clickable task names
+    document.body.classList.add('gantt-draw-mode');
   } else {
-    if (btn) { btn.classList.remove('btn-primary'); btn.innerHTML = '✏️ Draw Mode'; }
+    if (btn) { btn.classList.remove('btn-primary'); btn.innerHTML = '✏️ Draw Mode'; btn.style.background = ''; }
     if (help) help.style.display = 'none';
     teardownGanttDragHandlers();
+    document.body.classList.remove('gantt-draw-mode');
+    window._drawTaskId = null;
     toast('โหมดวาดปิด');
   }
 }
 
-function populateDrawTaskSelector() {
-  const sel = document.getElementById('ganttDrawTaskSel');
-  if (!sel) return;
-  const pid = document.getElementById('planProjectSel')?.value;
-  const p = pid ? getProject(pid) : null;
-  if (!p) { sel.innerHTML = '<option>ไม่มีโครงการ</option>'; return; }
-  sel.innerHTML = '<option value="">— เลือก Task —</option>' +
-    (p.tasks||[]).map(t => `<option value="${t.id}">${t.no||''}. ${t.name||''} (${t.planStart||'-'}→${t.planEnd||'-'})</option>`).join('');
-  if (sel.options.length > 1 && !window._drawTaskId) {
-    sel.value = sel.options[1].value;
-    window._drawTaskId = sel.value;
-  }
+function selectDrawTask(targetId, targetName) {
+  if (!window._ganttDrawMode) return;
+  window._drawTaskId = targetId;
+  // Highlight selected name row
+  document.querySelectorAll('.draw-task-selected').forEach(el => el.classList.remove('draw-task-selected'));
+  const cells = document.querySelectorAll(`tr[data-task-id="${targetId}"] .col-name`);
+  cells.forEach(c => c.classList.add('draw-task-selected'));
+  // Update badge in help bar
+  const badge = document.getElementById('drawSelectedTask');
+  if (badge) badge.textContent = `✓ ${targetName || targetId}`;
+  toast(`✓ เลือก "${targetName}" — ลากในเซลล์`);
 }
 
 function setupGanttDragHandlers() {
@@ -2378,9 +2632,34 @@ function setupGanttDragHandlers() {
     });
   };
 
+  // ─── Click on task name → select it (V7.2: tasks only, no L3) ───
+  const onTaskNameClick = (e) => {
+    if (!window._ganttDrawMode) return;
+    const nameCell = e.target.closest('.col-name');
+    if (!nameCell) return;
+    const row = nameCell.closest('tr.plan-row');
+    if (!row || !row.dataset.taskId) return;
+    const pid = document.getElementById('planProjectSel')?.value;
+    const p = pid ? getProject(pid) : null;
+    if (!p) return;
+    const targetId = row.dataset.taskId;
+    const t = (p.tasks||[]).find(x => x.id === targetId);
+    const targetName = t ? t.name : '';
+    if (!targetId) return;
+    e.preventDefault();
+    e.stopPropagation();
+    selectDrawTask(targetId, targetName);
+  };
+
   const onMouseDown = (e) => {
     if (!window._ganttDrawMode) return;
-    if (!window._drawTaskId) { toast('เลือก Task ก่อน','error'); return; }
+    if (!window._drawTaskId) {
+      // Hint: click task name first
+      const nameCell = e.target.closest('.col-name');
+      if (nameCell) return; // let click handler deal with it
+      toast('คลิกชื่อ Task ด้านซ้ายก่อน','error');
+      return;
+    }
     const cell = e.target.closest('td.day-cell[data-date]');
     if (!cell) return;
     e.preventDefault();
@@ -2409,22 +2688,31 @@ function setupGanttDragHandlers() {
     const pid = document.getElementById('planProjectSel')?.value;
     const p = pid ? getProject(pid) : null;
     const tid = window._drawTaskId;
-    const t = p ? (p.tasks||[]).find(x => x.id === tid) : null;
-    if (!t) { toast('ไม่พบ Task','error'); return; }
-    if (!confirm(`อัพเดต "${t.name}"\n  เดิม: ${t.planStart} → ${t.planEnd}\n  ใหม่: ${pStart} → ${pEnd}\nยืนยัน?`)) return;
-    t.planStart = pStart;
-    t.planEnd = pEnd;
+    const target = p ? (p.tasks||[]).find(x => x.id === tid) : null;
+    const targetName = target ? target.name : '';
+
+    if (!target) { toast('ไม่พบรายการ','error'); return; }
+    if (!confirm(`อัพเดต "${targetName}"\n  เดิม: ${target.planStart||'-'} → ${target.planEnd||'-'}\n  ใหม่: ${pStart} → ${pEnd}\nยืนยัน?`)) return;
+    target.planStart = pStart;
+    target.planEnd = pEnd;
     saveState();
     renderPlan();
-    populateDrawTaskSelector();
-    toast(`✓ อัพเดต ${t.name}`);
+    // Re-apply selected state after re-render
+    setTimeout(() => {
+      if (window._drawTaskId) {
+        const cells = document.querySelectorAll(`tr[data-task-id="${window._drawTaskId}"] .col-name`);
+        cells.forEach(c => c.classList.add('draw-task-selected'));
+      }
+    }, 100);
+    toast(`✓ อัพเดต ${targetName}`);
   };
 
   // Store refs so we can remove
-  window._ganttDragHandlers = { onMouseDown, onMouseMove, onMouseUp };
+  window._ganttDragHandlers = { onMouseDown, onMouseMove, onMouseUp, onTaskNameClick };
   container.addEventListener('mousedown', onMouseDown);
   container.addEventListener('mousemove', onMouseMove);
   document.addEventListener('mouseup', onMouseUp);
+  container.addEventListener('click', onTaskNameClick, true);  // capture phase = before onclick
 
   // Inject draw-preview CSS once
   if (!document.getElementById('drawPreviewCSS')) {
@@ -2442,9 +2730,215 @@ function teardownGanttDragHandlers() {
   container.removeEventListener('mousedown', h.onMouseDown);
   container.removeEventListener('mousemove', h.onMouseMove);
   document.removeEventListener('mouseup', h.onMouseUp);
+  if (h.onTaskNameClick) container.removeEventListener('click', h.onTaskNameClick, true);
+  // Clear all visual hints
+  document.querySelectorAll('.draw-task-selected').forEach(el => el.classList.remove('draw-task-selected'));
   // Clear any leftover highlights
   container.querySelectorAll('td.day-cell.draw-preview').forEach(c => c.classList.remove('draw-preview'));
   window._ganttDragHandlers = null;
+}
+
+/* ═══════════════════════════════════════════════════════
+   SHIFT MODE V7.2 — เลือกหลาย task แล้วลาก = เลื่อนทั้งกลุ่ม
+   ═══════════════════════════════════════════════════════ */
+function toggleGanttShiftMode() {
+  // Auto-close Draw Mode if open
+  if (window._ganttDrawMode) toggleGanttDrawMode();
+
+  window._ganttShiftMode = !window._ganttShiftMode;
+  const btn = document.getElementById('ganttShiftModeBtn');
+  const help = document.getElementById('ganttShiftHelp');
+  if (window._ganttShiftMode) {
+    window._shiftSelectedIds = new Set();
+    if (btn) { btn.classList.add('btn-primary'); btn.innerHTML = '🔀 Shift ON'; btn.style.background = '#8c52ff'; btn.style.color = '#fff'; }
+    if (help) {
+      help.style.display = 'block';
+      help.innerHTML = `<strong>🔀 โหมดเลื่อนหลาย Task เปิด</strong> — <strong>1)</strong> คลิกชื่อ Task หลายตัวเพื่อเลือก (ไฮไลท์ม่วง) → <strong>2)</strong> ลากในเซลล์วันที่ → ทั้งหมดจะเลื่อนไปวันใหม่ <em>(คงระยะเวลาและระยะห่างเดิม)</em>
+        <span id="shiftSelectedCount" style="margin-left:8px;padding:3px 10px;background:rgba(140,82,255,0.2);border:1px solid #8c52ff;border-radius:4px;color:#a570ff;font-weight:700;font-size:11px;">0 เลือก</span>
+        <button class="btn btn-sm" onclick="shiftSelectAllPhase()" style="margin-left:6px;font-size:10px;" title="เลือกทุก task ที่เห็น">เลือกทั้งหมด</button>
+        <button class="btn btn-sm" onclick="shiftClearSelection()" style="margin-left:4px;font-size:10px;">ล้าง</button>
+        <button class="btn btn-sm" onclick="toggleGanttShiftMode()" style="margin-left:8px;">ปิด</button>`;
+    }
+    setupGanttShiftHandlers();
+    document.body.classList.add('gantt-shift-mode');
+    toast('🔀 Shift Mode เปิด — คลิกชื่อ task เพื่อเลือก (เลือกได้หลายตัว)');
+  } else {
+    if (btn) { btn.classList.remove('btn-primary'); btn.innerHTML = '🔀 Shift Mode'; btn.style.background = ''; btn.style.color = ''; }
+    if (help) help.style.display = 'none';
+    teardownGanttShiftHandlers();
+    document.body.classList.remove('gantt-shift-mode');
+    window._shiftSelectedIds = null;
+    toast('Shift Mode ปิด');
+  }
+}
+
+function shiftUpdateBadge() {
+  const badge = document.getElementById('shiftSelectedCount');
+  if (badge && window._shiftSelectedIds) badge.textContent = `${window._shiftSelectedIds.size} เลือก`;
+}
+
+function shiftSelectAllPhase() {
+  if (!window._ganttShiftMode || !window._shiftSelectedIds) return;
+  document.querySelectorAll('tr.plan-row[data-task-id]').forEach(row => {
+    const tid = row.dataset.taskId;
+    if (!tid) return;
+    window._shiftSelectedIds.add(tid);
+    const nameCell = row.querySelector('.col-name');
+    if (nameCell) nameCell.classList.add('shift-task-selected');
+  });
+  shiftUpdateBadge();
+  toast(`เลือก ${window._shiftSelectedIds.size} tasks`);
+}
+
+function shiftClearSelection() {
+  if (!window._shiftSelectedIds) return;
+  window._shiftSelectedIds.clear();
+  document.querySelectorAll('.shift-task-selected').forEach(el => el.classList.remove('shift-task-selected'));
+  shiftUpdateBadge();
+}
+
+function setupGanttShiftHandlers() {
+  const container = document.getElementById('ganttContainer');
+  if (!container) return;
+  let isDragging = false;
+  let startCell = null;
+  let endCell = null;
+  const getDateFromCell = (cell) => cell?.dataset?.date || null;
+
+  // Inject preview CSS once
+  if (!document.getElementById('shiftPreviewCSS')) {
+    const css = document.createElement('style');
+    css.id = 'shiftPreviewCSS';
+    css.textContent = `td.day-cell.shift-preview-anchor { outline:3px dashed #8c52ff !important; outline-offset:-2px; }`;
+    document.head.appendChild(css);
+  }
+
+  const clearHighlight = () => {
+    container.querySelectorAll('td.day-cell.shift-preview, td.day-cell.shift-preview-anchor').forEach(c => {
+      c.classList.remove('shift-preview');
+      c.classList.remove('shift-preview-anchor');
+    });
+  };
+
+  const highlightRange = (s, e) => {
+    if (!s || !e) return;
+    const [start, end] = s < e ? [s, e] : [e, s];
+    container.querySelectorAll('td.day-cell[data-date]').forEach(c => {
+      const d = c.dataset.date;
+      if (d >= start && d <= end) c.classList.add('shift-preview');
+      else c.classList.remove('shift-preview');
+    });
+  };
+
+  // Click on task name → toggle selection
+  const onTaskNameClick = (e) => {
+    if (!window._ganttShiftMode) return;
+    const nameCell = e.target.closest('.col-name');
+    if (!nameCell) return;
+    const row = nameCell.closest('tr.plan-row');
+    if (!row || !row.dataset.taskId) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const tid = row.dataset.taskId;
+    if (window._shiftSelectedIds.has(tid)) {
+      window._shiftSelectedIds.delete(tid);
+      nameCell.classList.remove('shift-task-selected');
+    } else {
+      window._shiftSelectedIds.add(tid);
+      nameCell.classList.add('shift-task-selected');
+    }
+    shiftUpdateBadge();
+  };
+
+  const onMouseDown = (e) => {
+    if (!window._ganttShiftMode) return;
+    if (!window._shiftSelectedIds || window._shiftSelectedIds.size === 0) {
+      const nameCell = e.target.closest('.col-name');
+      if (nameCell) return;  // let click handler deal with it
+      toast('กรุณาเลือก task อย่างน้อย 1 ตัวก่อน','error');
+      return;
+    }
+    const cell = e.target.closest('td.day-cell[data-date]');
+    if (!cell) return;
+    e.preventDefault();
+    isDragging = true;
+    startCell = cell;
+    endCell = cell;
+    clearHighlight();
+    highlightRange(getDateFromCell(startCell), getDateFromCell(endCell));
+    startCell.classList.add('shift-preview-anchor');
+  };
+
+  const onMouseMove = (e) => {
+    if (!isDragging) return;
+    const cell = e.target.closest('td.day-cell[data-date]');
+    if (cell) {
+      endCell = cell;
+      highlightRange(getDateFromCell(startCell), getDateFromCell(endCell));
+      startCell.classList.add('shift-preview-anchor');
+    }
+  };
+
+  const onMouseUp = (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+    const s = getDateFromCell(startCell);
+    const eDate = getDateFromCell(endCell);
+    clearHighlight();
+    if (!s || !eDate) return;
+    const shiftDays = daysBetween(s, eDate);  // signed: + if eDate after s
+    if (shiftDays === 0) { toast('ลากให้คลุมอย่างน้อย 2 วัน','error'); return; }
+
+    const pid = document.getElementById('planProjectSel')?.value;
+    const p = pid ? getProject(pid) : null;
+    if (!p) return;
+    const selected = Array.from(window._shiftSelectedIds);
+    const tasks = (p.tasks||[]).filter(t => selected.includes(t.id) && t.planStart && t.planEnd);
+    if (!tasks.length) { toast('ไม่พบ task ที่เลือก','error'); return; }
+
+    const direction = shiftDays > 0 ? 'ไปข้างหน้า' : 'ถอยหลัง';
+    const absDays = Math.abs(shiftDays);
+    if (!confirm(`เลื่อน ${tasks.length} task ${direction} ${absDays} วัน?\n(คงระยะเวลาเดิมของแต่ละ task ไว้)`)) return;
+
+    tasks.forEach(t => {
+      t.planStart = addDays(t.planStart, shiftDays);
+      t.planEnd = addDays(t.planEnd, shiftDays);
+    });
+    saveState();
+    renderPlan();
+    // Re-apply selected highlight after re-render
+    setTimeout(() => {
+      window._shiftSelectedIds.forEach(tid => {
+        const row = document.querySelector(`tr.plan-row[data-task-id="${tid}"]`);
+        const nc = row?.querySelector('.col-name');
+        if (nc) nc.classList.add('shift-task-selected');
+      });
+      shiftUpdateBadge();
+    }, 100);
+    toast(`✓ เลื่อน ${tasks.length} task ${direction} ${absDays} วัน`);
+  };
+
+  window._ganttShiftHandlers = { onMouseDown, onMouseMove, onMouseUp, onTaskNameClick };
+  container.addEventListener('mousedown', onMouseDown);
+  container.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+  container.addEventListener('click', onTaskNameClick, true);
+}
+
+function teardownGanttShiftHandlers() {
+  const container = document.getElementById('ganttContainer');
+  if (!container || !window._ganttShiftHandlers) return;
+  const h = window._ganttShiftHandlers;
+  container.removeEventListener('mousedown', h.onMouseDown);
+  container.removeEventListener('mousemove', h.onMouseMove);
+  document.removeEventListener('mouseup', h.onMouseUp);
+  if (h.onTaskNameClick) container.removeEventListener('click', h.onTaskNameClick, true);
+  document.querySelectorAll('.shift-task-selected').forEach(el => el.classList.remove('shift-task-selected'));
+  container.querySelectorAll('td.day-cell.shift-preview, td.day-cell.shift-preview-anchor').forEach(c => {
+    c.classList.remove('shift-preview');
+    c.classList.remove('shift-preview-anchor');
+  });
+  window._ganttShiftHandlers = null;
 }
 
 // Helper: format date as dd/mm/yyyy (CE)
@@ -2600,7 +3094,7 @@ function renderGanttView(p) {
         hasMat ? 'has-material' : '',
         'mw-cell',
       ].filter(Boolean).join(' ');
-      return `<td class="${cls}" data-date="${per}" style="cursor:pointer;" ondblclick="openQuickMaterialModal('${per}','${taskId||''}','${isSub?'sub':'task'}')" title="${matTitle}${per} — ดับเบิ้ลคลิกเพื่อเพิ่มสั่งวัสดุ">${label}</td>`;
+      return `<td class="${cls}" data-date="${per}" style="cursor:pointer;" ondblclick="openCellActionPicker('${per}','${taskId||''}','${isSub?'sub':'task'}')" title="${matTitle}${per} — ดับเบิ้ลคลิก = สั่งวัสดุ หรือ ลงวันตรวจ">${label}</td>`;
     }).join('');
   };
 
@@ -2643,8 +3137,9 @@ function renderGanttView(p) {
           <strong style="flex:1;cursor:pointer;" onclick="togglePhaseCollapse('${phaseKey}')">${phaseIdx+1}. ${phase.replace(/^\d+\.\s*/, '')}</strong>
           <span class="text-xs text-muted">${tasksInPhase.length} tasks</span>
           <span class="text-xs" style="color:var(--green);font-family:'IBM Plex Mono',monospace;min-width:36px;text-align:right;">${avgPct.toFixed(0)}%</span>
+          <button onclick="openTaskModalForPhase('${phaseKey}')" title="+ เพิ่ม Task ใต้หมวดนี้" style="background:rgba(63,185,80,0.18);border:1px solid var(--green);color:var(--green);padding:1px 8px;border-radius:3px;font-size:10px;cursor:pointer;line-height:1.4;font-weight:600;">+ Task</button>
           <button onclick="renamePhase('${phaseKey}')" title="แก้ชื่อหมวดงาน" style="background:transparent;border:1px solid var(--border2);color:var(--text2);padding:1px 6px;border-radius:3px;font-size:10px;cursor:pointer;line-height:1.4;">✎</button>
-          <button onclick="deletePhase('${phaseKey}')" title="ลบทั้งหมวดงาน (รวม sub-tasks)" style="background:rgba(248,81,73,0.15);border:1px solid var(--red);color:var(--red);padding:1px 6px;border-radius:3px;font-size:10px;cursor:pointer;line-height:1.4;">🗑</button>
+          <button onclick="deletePhase('${phaseKey}')" title="ลบทั้งหมวดงาน (รวม task ทั้งหมด)" style="background:rgba(248,81,73,0.15);border:1px solid var(--red);color:var(--red);padding:1px 6px;border-radius:3px;font-size:10px;cursor:pointer;line-height:1.4;">🗑</button>
         </div>
       </td>
       ${phaseBarCells}
@@ -2662,8 +3157,7 @@ function renderGanttView(p) {
         <td class="info-col col-no" rowspan="${hasActual?2:1}" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text2);">${phaseIdx+1}.${taskIdx+1}</td>
         <td class="info-col col-name" rowspan="${hasActual?2:1}" oncontextmenu="showTaskContextMenu(event,'${t.id}');return false;" title="คลิก = แก้ · คลิกขวา = เมนู">
           <div style="display:flex;align-items:center;gap:4px;">
-            <span style="cursor:pointer;flex:1;" onclick="openTaskModal('${t.id}')">${t.isCritical?'<span style="color:var(--red);font-size:9px;">🔴</span> ':''}${t.name || ''}${t.warning?` <span style="color:var(--accent);" title="${(t.warning||'').replace(/"/g,'&quot;')}">⚠</span>`:''}</span>
-            <button class="btn btn-sm" style="padding:1px 5px;font-size:9px;" onclick="event.stopPropagation();openSubTaskModal('${t.id}','')" title="+ Sub-task">+▸</button>
+            <span style="cursor:pointer;flex:1;" onclick="openTaskModal('${t.id}')">${t.isCritical?'<span style="color:var(--red);font-size:9px;">🔴</span> ':''}${t.blocked?`<span style="color:#ff5252;font-size:10px;" title="⛔ ${(t.blockedReason||'ติดปัญหา').replace(/"/g,'&quot;')}">⛔</span> `:''}${t.name || ''}${t.warning?` <span style="color:var(--accent);" title="${(t.warning||'').replace(/"/g,'&quot;')}">⚠</span>`:''}</span>
           </div>
           ${hasActual?'<div class="text-xs text-muted" style="font-size:8px;font-weight:400;">PLAN</div>':''}
         </td>
@@ -2683,8 +3177,8 @@ function renderGanttView(p) {
         </tr>`;
       }
 
-      // Sub-task rows (skip if toggled off)
-      const showSubGantt = state.settings.ganttShowSub !== false;
+      // V7: Layer 3 (sub-tasks) removed — never show
+      const showSubGantt = false;
       if (showSubGantt) (t.subTasks||[]).forEach(st => {
         if (!st.planStart || !st.planEnd) return;
         const stStatus = subTaskStatus(st);
@@ -2822,42 +3316,15 @@ function renderListView(p) {
           onchange="updateTaskField('${p.id}','${t.id}','actualPct',this.value)">
         <div class="progress" style="flex:1;"><div class="progress-bar ${(+t.actualPct||0)>=100?'green':''}" style="width:${t.actualPct||0}%;"></div></div>
       </div></td>
-      <td><span class="status-badge ${status}">${status==='pending'?'รอเริ่ม':status==='progress'?'กำลังทำ':status==='done'?'เสร็จ':'ล่าช้า'}</span></td>
+      <td><span class="status-badge ${status}" title="${status==='blocked'&&t.blockedReason?'⛔ '+t.blockedReason.replace(/"/g,'&quot;'):''}">${status==='pending'?'รอเริ่ม':status==='progress'?'กำลังทำ':status==='done'?'เสร็จ':status==='blocked'?'⛔ ติดปัญหา':'ล่าช้า'}</span></td>
       <td><input type="text" class="inline-text" value="${(t.warning||'').replace(/"/g,'&quot;')}" placeholder="" onchange="updateTaskField('${p.id}','${t.id}','warning',this.value)" style="font-size:10px;"></td>
       <td>
         <button class="btn btn-sm" onclick="openTaskModal('${t.id}')" title="แก้">✎</button>
-        <button class="btn btn-sm" onclick="openSubTaskModal('${t.id}','')" title="+ Sub">+▸</button>
         <button class="btn btn-sm btn-danger" onclick="deleteTask('${p.id}','${t.id}')" title="ลบ">×</button>
       </td>
     </tr>`;
 
-    // Sub-task rows
-    (t.subTasks||[]).forEach(st => {
-      const stStatus = subTaskStatus(st);
-      const stDur = (st.planStart && st.planEnd) ? daysBetween(st.planStart, st.planEnd) + 1 : 0;
-      rowsHtml += `<tr data-sub-id="${st.id}" style="background:var(--bg);">
-        <td></td>
-        <td></td>
-        <td style="padding-left:30px;font-size:11px;color:var(--text2);"><span style="color:var(--text3);">└▸</span>
-          <span style="cursor:pointer;" onclick="openSubTaskModal('${t.id}','${st.id}')">${st.name||''}</span></td>
-        <td class="text-center">${st.isCritical?'<span style="color:var(--red);font-size:10px;">🔴</span>':''}</td>
-        <td class="text-xs">${st.planStart?fmtDateShort(st.planStart):''}</td>
-        <td class="text-xs">${st.planEnd?fmtDateShort(st.planEnd):''}</td>
-        <td class="num mono text-xs">${stDur||''}</td>
-        <td></td>
-        <td></td>
-        <td><div class="flex gap-sm">
-          <input type="number" class="inline-input" value="${st.actualPct||''}" min="0" max="100" placeholder="0" style="width:50px;"
-            onchange="updateSubTaskField('${p.id}','${t.id}','${st.id}','actualPct',this.value)">
-        </div></td>
-        <td><span class="status-badge ${stStatus}" style="font-size:9px;">${stStatus==='pending'?'รอ':stStatus==='progress'?'ทำ':stStatus==='done'?'เสร็จ':'ช้า'}</span></td>
-        <td class="text-xs text-muted">${st.warning||''}</td>
-        <td>
-          <button class="btn btn-sm" onclick="openSubTaskModal('${t.id}','${st.id}')" title="แก้">✎</button>
-          <button class="btn btn-sm btn-danger" onclick="deleteSubTaskInline('${p.id}','${t.id}','${st.id}')" title="ลบ">×</button>
-        </td>
-      </tr>`;
-    });
+    // V7: sub-task rendering removed
   });
   tbody.innerHTML = rowsHtml;
 }
@@ -3190,7 +3657,7 @@ function render3WeekView(p) {
         'mw-cell',
       ].filter(Boolean).join(' ');
       const styleBreak = isWeekBreak ? 'border-left:3px solid var(--accent);' : '';
-      return `<td class="${cls}" style="${styleBreak}cursor:pointer;" ondblclick="openQuickMaterialModal('${per}','${taskId||''}','${isSub?'sub':'task'}')" title="${matTitle}${per} — ดับเบิ้ลคลิกเพื่อเพิ่มสั่งวัสดุ">${label}</td>`;
+      return `<td class="${cls}" style="${styleBreak}cursor:pointer;" ondblclick="openCellActionPicker('${per}','${taskId||''}','${isSub?'sub':'task'}')" title="${matTitle}${per} — ดับเบิ้ลคลิก = สั่งวัสดุ หรือ ลงวันตรวจ">${label}</td>`;
     }).join('');
   };
 
@@ -3208,7 +3675,7 @@ function render3WeekView(p) {
         bodyRows += `<tr data-task-id="${t.id}" class="plan-row">
           <td class="info-col col-no" rowspan="${hasActual?2:1}">${t.no||''}</td>
           <td class="info-col col-name" rowspan="${hasActual?2:1}" oncontextmenu="showTaskContextMenu(event,'${t.id}');return false;" title="คลิก = แก้ · ดับเบิ้ลคลิก = ลงวันตรวจงาน · คลิกขวา = เมนู" style="cursor:pointer;" onclick="openTaskModal('${t.id}')" ondblclick="event.stopPropagation();openInspectionModal('task','${t.id}','')">
-            ${t.isCritical?'<span style="color:var(--red);font-size:9px;">🔴</span> ':''}${t.name||''}${t.warning?` <span style="color:var(--accent);" title="${(t.warning||'').replace(/"/g,'&quot;')}">⚠</span>`:''}${(t.inspections||[]).length?` <span style="color:var(--green);font-size:9px;" title="มี ${t.inspections.length} บันทึกการตรวจ">📋${t.inspections.length}</span>`:''}
+            ${t.isCritical?'<span style="color:var(--red);font-size:9px;">🔴</span> ':''}${t.name||''}${t.warning?` <span style="color:var(--accent);" title="${(t.warning||'').replace(/"/g,'&quot;')}">⚠</span>`:''}${(t.plannedInspections||[]).length?` <span style="color:var(--green);font-size:9px;" title="มี ${t.plannedInspections.length} บันทึกการตรวจ">📋${t.plannedInspections.length}</span>`:''}
             ${hasActual?'<div class="text-xs text-muted" style="font-size:8px;font-weight:400;">PLAN</div>':''}
           </td>
           <td class="info-col col-start">${fmtDateCE(t.planStart)}</td>
@@ -3225,7 +3692,8 @@ function render3WeekView(p) {
         }
 
         // Sub-task rows (skip if toggled off)
-        const showSubMW = state.settings.ganttShowSub !== false;
+        // V7: Layer 3 (sub-tasks) removed — never show
+        const showSubMW = false;
         if (showSubMW) (t.subTasks||[]).forEach(st => {
           if (!st.planStart || !st.planEnd) return;
           if (st.planEnd < periods[0] || st.planStart > periods[20]) return;
@@ -3235,7 +3703,7 @@ function render3WeekView(p) {
           bodyRows += `<tr class="sub-row" data-sub-id="${st.id}">
             <td class="info-col col-no" rowspan="${stHasActual?2:1}"></td>
             <td class="info-col col-name" rowspan="${stHasActual?2:1}" style="cursor:pointer;" onclick="openSubTaskModal('${t.id}','${st.id}')" ondblclick="event.stopPropagation();openInspectionModal('sub','${t.id}','${st.id}')" title="คลิก = แก้ · ดับเบิ้ลคลิก = ลงวันตรวจงาน">
-              ${st.isCritical?'<span style="color:var(--red);font-size:8px;">🔴</span> ':''}${st.name||''}${(st.inspections||[]).length?` <span style="color:var(--green);font-size:8px;" title="มี ${st.inspections.length} บันทึก">📋${st.inspections.length}</span>`:''}
+              ${st.isCritical?'<span style="color:var(--red);font-size:8px;">🔴</span> ':''}${st.name||''}${(st.plannedInspections||[]).length?` <span style="color:var(--green);font-size:8px;" title="มี ${st.plannedInspections.length} บันทึก">📋${st.plannedInspections.length}</span>`:''}
             </td>
             <td class="info-col col-start">${fmtDateCE(st.planStart)}</td>
             <td class="info-col col-finish">${fmtDateCE(st.planEnd)}</td>
@@ -3252,35 +3720,15 @@ function render3WeekView(p) {
         });
 
         // ─── Compact "+ sub-task" row — small inline buttons per week (replaces the large row)
-        const taskActiveIn = (wkStart, wkEnd) => {
-          if (!t.planStart || !t.planEnd) return false;
-          return !(t.planEnd < wkStart || t.planStart > wkEnd);
-        };
-        let weekBtnCells = '';
-        weeks.forEach((w, wi) => {
-          const active = taskActiveIn(w.start, w.end);
-          const styleBreak = wi > 0 ? 'border-left:3px solid var(--accent);' : '';
-          if (active) {
-            const color = wi === 0 ? 'var(--blue)' : wi === 1 ? 'var(--accent)' : 'var(--green)';
-            weekBtnCells += `<td colspan="7" class="week-add-cell" data-task-id="${t.id}" data-week-start="${w.start}" data-week-end="${w.end}" style="${styleBreak}text-align:center;cursor:pointer;font-size:9px;color:${color};padding:2px 0;background:rgba(139,148,158,0.03);" title="เพิ่ม sub-task ในสัปดาห์นี้">+ sub</td>`;
-          } else {
-            weekBtnCells += `<td colspan="7" style="${styleBreak}background:rgba(139,148,158,0.03);padding:2px 0;"></td>`;
-          }
-        });
-        bodyRows += `<tr class="week-add-row compact-add" data-task-id="${t.id}">
-          <td class="info-col col-no" style="background:var(--bg3);padding:2px 4px;font-size:8px;color:var(--text3);"></td>
-          <td class="info-col col-name" style="background:var(--bg3);padding:2px 6px;font-size:8px;color:var(--text3);text-align:right;">↳</td>
-          <td class="info-col col-start" style="background:var(--bg3);padding:2px;"></td>
-          <td class="info-col col-finish" style="background:var(--bg3);padding:2px;"></td>
-          ${weekBtnCells}
-        </tr>`;
+        // V7: Layer 3 (sub-tasks) removed — no more "+ sub" inline buttons
+        // (entire week-add-row removed)
       });
     });
   }
 
   document.getElementById('threeWeekView').innerHTML = `
     <div style="background:var(--bg3);padding:6px 12px;border-radius:6px;margin-bottom:8px;font-size:10px;color:var(--text2);">
-      💡 <strong>ดับเบิ้ลคลิก</strong>ที่ <strong>เซลล์วัน</strong> = เพิ่มสั่งวัสดุ · <strong>ดับเบิ้ลคลิก</strong>ที่ <strong>ชื่อ task/sub-task</strong> = ลงวันตรวจงาน · <strong>"+ sub"</strong> ในแถวล่าง task เพื่อเพิ่ม sub-task · <span style="display:inline-block;width:14px;height:10px;border:3px solid #f0b429;border-radius:1px;vertical-align:middle;"></span> = วันต้องใช้วัสดุ
+      💡 <strong>ดับเบิ้ลคลิก</strong>ที่ <strong>เซลล์วัน</strong> = เลือก สั่งวัสดุ / ลงวันตรวจงาน · <strong>ดับเบิ้ลคลิก</strong>ที่ <strong>ชื่อ task</strong> = ลงวันตรวจ (วันนี้) · <span style="display:inline-block;width:14px;height:10px;border:3px solid #f0b429;border-radius:1px;vertical-align:middle;"></span> = วันต้องใช้วัสดุ · 📋N = มีบันทึกตรวจ
     </div>
     <div class="gantt-wrap">
       <table class="gantt-table">
@@ -3393,7 +3841,7 @@ function render3WeekView(p) {
     <div style="text-align:center;padding:14px;background:var(--bg3);border-radius:6px;">
       <div class="text-xs text-muted">Tasks ทั้งหมด</div>
       <div style="font-size:32px;font-weight:700;color:var(--accent);">${totalCount}</div>
-      <div class="text-xs text-muted" style="margin-top:4px;">+ ${totalSubsIn3Weeks} sub-tasks</div>
+      <div class="text-xs text-muted" style="margin-top:4px;">ในช่วง 3 สัปดาห์นี้</div>
     </div>
     <div style="text-align:center;padding:14px;background:var(--bg3);border-radius:6px;">
       <div class="text-xs text-muted">🔴 Critical Path</div>
@@ -3562,33 +4010,100 @@ function addSubTaskFromLib(pid, tid, weekStart, weekEnd, name) {
 function openSubTaskLibraryModal(activeTab) {
   const pid = document.getElementById('planProjectSel').value;
   const p = getProject(pid);
-  // Init sub-task library if missing
-  if (!p.subTaskLibrary) {
-    p.subTaskLibrary = JSON.parse(JSON.stringify(state.subTaskLibrary || {}));
-  }
   // Init material library if missing
   if (!Array.isArray(p.materialLibrary)) {
     p.materialLibrary = JSON.parse(JSON.stringify(DEFAULT_MATERIAL_LIBRARY));
   }
-  const tab = activeTab || (window._libActiveTab || 'subtask');
+  const tab = activeTab || (window._libActiveTab || 'task');
   window._libActiveTab = tab;
 
   const tabs = `<div class="tabs" style="margin-bottom:14px;">
-    <div class="tab ${tab==='subtask'?'active':''}" onclick="openSubTaskLibraryModal('subtask')">📋 Sub-task Library</div>
+    <div class="tab ${tab==='task'?'active':''}" onclick="openSubTaskLibraryModal('task')">📋 Task Library (L2)</div>
     <div class="tab ${tab==='material'?'active':''}" onclick="openSubTaskLibraryModal('material')">🧱 Material / Equipment Library</div>
   </div>`;
 
   let body = '';
-  if (tab === 'subtask') body = renderSubTaskLibTab(pid, p);
+  if (tab === 'task') body = renderTaskLibTab(pid, p);
   else body = renderMaterialLibTab(pid, p);
 
   openModal(`<div class="modal-title">📚 Library Manager</div>
-    <div class="modal-sub">รายการที่ใช้บ่อย — แชร์กันทั้งโครงการ</div>
+    <div class="modal-sub">รายการที่ใช้บ่อย — Task Library (L2) ดึงจาก Master Library มาตรฐาน 68 รายการ</div>
     ${tabs}
     ${body}
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="closeModal()">ปิด</button>
     </div>`);
+}
+
+// V7: Task Library tab — shows MASTER_TASK_LIBRARY (68 task) grouped by phase
+// Users can add any task directly to the current project plan from here
+function renderTaskLibTab(pid, p) {
+  const byCat = {};
+  const catOrder = [];
+  MASTER_TASK_LIBRARY.forEach(t => {
+    if (!byCat[t.category]) { byCat[t.category] = []; catOrder.push(t.category); }
+    byCat[t.category].push(t);
+  });
+
+  const catsHtml = catOrder.map(cat => {
+    const items = byCat[cat];
+    const rows = items.map(t => {
+      const matStr = (t.main && t.main.length) ? t.main.join(', ') : '<span class="text-muted">—</span>';
+      return `<div style="display:grid;grid-template-columns:70px 1fr 50px 50px 60px;gap:6px;align-items:center;padding:5px 6px;border-bottom:1px solid var(--border);font-size:11px;">
+        <span style="font-family:monospace;color:var(--blue);font-weight:600;font-size:10px;">${t.code}</span>
+        <div style="line-height:1.3;">
+          <div>${t.name}</div>
+          <div class="text-xs text-muted" style="font-size:9px;margin-top:2px;">วัสดุ: ${matStr}</div>
+        </div>
+        <span class="text-xs text-muted text-center">${t.duration}d</span>
+        <span class="text-xs text-muted text-center">+${t.offset||0}d</span>
+        <button class="btn btn-sm btn-primary" style="font-size:10px;padding:3px 6px;" onclick="addTaskFromLibrary('${pid}','${t.code}')" title="เพิ่ม task นี้เข้าแผน">+ เพิ่ม</button>
+      </div>`;
+    }).join('');
+    return `<div style="margin-bottom:10px;border:1px solid var(--border);border-radius:6px;overflow:hidden;">
+      <div style="background:var(--bg3);padding:6px 10px;display:flex;justify-content:space-between;align-items:center;">
+        <strong style="font-size:12px;color:var(--accent);">${cat}</strong>
+        <span class="text-xs text-muted">${items.length} task</span>
+      </div>
+      <div>${rows}</div>
+    </div>`;
+  }).join('');
+
+  return `<div style="background:rgba(63,185,80,0.1);padding:8px 12px;border-radius:6px;margin-bottom:12px;font-size:11px;">
+      💡 Task Library = หมวด (L1) + รายการงาน (L2) มาตรฐานสำหรับบ้าน 2 ชั้น · กด <strong>+ เพิ่ม</strong> เพื่อใส่ task นั้นในแผนของโครงการ
+    </div>
+    <div style="max-height:55vh;overflow-y:auto;padding-right:6px;">${catsHtml}</div>`;
+}
+
+// V7: Add a single task from Master Library to current project plan
+function addTaskFromLibrary(pid, code) {
+  const p = getProject(pid);
+  const tpl = MASTER_TASK_LIBRARY.find(t => t.code === code);
+  if (!tpl) { toast('ไม่พบ task code นี้', 'error'); return; }
+  const startDate = p.startDate || today();
+  const offset = tpl.offset || 0;
+  const planStart = addDays(startDate, offset);
+  const planEnd = addDays(planStart, (tpl.duration||1) - 1);
+  const maxNo = (p.tasks||[]).reduce((m,t) => Math.max(m, +t.no || 0), 0);
+  const taskId = uid();
+  p.tasks.push({
+    id: taskId,
+    no: maxNo + 1,
+    taskCode: tpl.code,
+    phase: tpl.category,
+    name: tpl.name,
+    planStart, planEnd,
+    isCritical: false,
+    budget: 0, planPct: 0, actualPct: 0,
+    status: 'รอเริ่ม', warning: '',
+    boqIds: [], subTasks: [],
+    note: '',
+    unit: tpl.unit||'',
+  });
+  saveState();
+  toast(`✓ เพิ่ม ${tpl.code} ${tpl.name} (${planStart} → ${planEnd})`);
+  // Update plan view if open
+  if (typeof renderPlan === 'function') renderPlan();
 }
 
 function renderSubTaskLibTab(pid, p) {
@@ -4503,7 +5018,6 @@ function showTaskContextMenu(event, tid) {
   menu.style.top = event.clientY + 'px';
   menu.innerHTML = `
     <div class="context-menu-item" onclick="openTaskModal('${tid}');this.parentElement.remove();">✎ แก้ไข Task</div>
-    <div class="context-menu-item" onclick="openSubTaskModal('${tid}','');this.parentElement.remove();">+▸ เพิ่ม Sub-task</div>
     <div class="context-menu-item" onclick="openQuickMaterialModalForTask('${tid}');this.parentElement.remove();">🧱 เพิ่มสั่งวัสดุ</div>
     <div class="context-menu-divider"></div>
     <div class="context-menu-item" onclick="duplicateTask('${pid}','${tid}');this.parentElement.remove();">⎘ Duplicate</div>
@@ -4889,11 +5403,21 @@ function saveMaterial(pid) {
 }
 
 /* ─── TASK MODAL (edit/create) ─── */
-function openTaskModal(tid) {
+// V7: Open task modal pre-filled with a specific phase (called from +Task button on phase header)
+function openTaskModalForPhase(phaseKey) {
+  const pid = document.getElementById('planProjectSel').value;
+  const p = getProject(pid);
+  // Find the original phase string matching this phaseKey (quotes were stripped)
+  const phases = [...new Set((p.tasks||[]).map(x => x.phase).filter(Boolean))];
+  const matched = phases.find(ph => ph.replace(/'/g,'').replace(/"/g,'') === phaseKey) || phaseKey;
+  openTaskModal('', matched);
+}
+
+function openTaskModal(tid, prefilledPhase) {
   const pid = document.getElementById('planProjectSel').value;
   const p = getProject(pid);
   const t = tid ? (p.tasks||[]).find(x => x.id === tid) : {
-    id:'', no:(p.tasks||[]).length + 1, phase:'', name:'',
+    id:'', no:(p.tasks||[]).length + 1, phase: prefilledPhase || '', name:'',
     planStart: today(), planEnd: addDays(today(),7),
     isCritical: false, budget: 0, planPct: 0, actualPct: 0,
     warning: '', boqIds: [], subTasks: [], note: ''
@@ -4923,18 +5447,49 @@ function openTaskModal(tid) {
       <input type="text" id="t_name" value="${(t.name||'').replace(/"/g,'&quot;')}" autofocus></div>
     <div style="background:rgba(88,166,255,0.08);padding:10px;border-radius:6px;margin-bottom:12px;">
       <div class="text-xs text-muted mb-sm" style="font-weight:600;">📐 แผน (Plan)</div>
-      <div class="field-row-3">
+      <div class="field-row">
         <div class="field-group"><label>วันเริ่ม</label><input type="date" id="t_pstart" value="${t.planStart||''}"></div>
         <div class="field-group"><label>วันสิ้นสุด</label><input type="date" id="t_pend" value="${t.planEnd||''}"></div>
-        <div class="field-group"><label>% แผน</label><input type="number" id="t_planPct" value="${t.planPct||0}" min="0" max="100"></div>
       </div>
     </div>
     <div style="background:rgba(63,185,80,0.08);padding:10px;border-radius:6px;margin-bottom:12px;">
-      <div class="text-xs text-muted mb-sm" style="font-weight:600;">✅ จริง (Actual)</div>
-      <div class="field-row-3">
+      <div class="text-xs text-muted mb-sm" style="font-weight:600;">✅ จริง (Actual) <span class="text-xs" style="font-weight:400;color:var(--text3);">— ติ๊กสถานะหรือกรอกวันได้</span></div>
+
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:10px;padding:8px;background:var(--bg2);border-radius:4px;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;">
+          <input type="checkbox" id="t_inProgress" ${t.inProgress?'checked':''} style="width:auto;margin:0;" onchange="syncStatusUI()">
+          <span style="color:var(--accent);font-weight:600;">🟠 กำลังดำเนินงาน</span>
+        </label>
+        <div style="display:flex;align-items:center;gap:4px;" id="t_pctWrap">
+          <label style="font-size:11px;color:var(--text2);">%:</label>
+          <input type="number" id="t_actPct" value="${t.actualPct||0}" min="0" max="100" style="width:60px;padding:3px 6px;font-size:12px;text-align:center;">
+        </div>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;margin-left:auto;">
+          <input type="checkbox" id="t_blocked" ${t.blocked?'checked':''} style="width:auto;margin:0;" onchange="syncStatusUI()">
+          <span style="color:#ff5252;font-weight:700;">⛔ ติดปัญหา</span>
+        </label>
+      </div>
+
+      <div id="t_blockedReasonWrap" class="field-group" style="margin-bottom:10px;display:${t.blocked?'block':'none'};">
+        <label style="color:#ff5252;">⛔ เหตุผลที่ติดปัญหา</label>
+        <input type="text" id="t_blockedReason" value="${(t.blockedReason||'').replace(/"/g,'&quot;')}" placeholder="เช่น รอวัสดุ / ฝนตก / คนงานขาด" style="border-color:#b00020;">
+      </div>
+
+      <div class="field-row">
         <div class="field-group"><label>วันเริ่มจริง</label><input type="date" id="t_astart" value="${t.actualStart||''}"></div>
-        <div class="field-group"><label>วันจบจริง</label><input type="date" id="t_aend" value="${t.actualEnd||''}"></div>
-        <div class="field-group"><label>% จริง</label><input type="number" id="t_actPct" value="${t.actualPct||0}" min="0" max="100"></div>
+        <div class="field-group"><label>วันจบจริง <span class="text-xs text-muted">(ลง = เสร็จ 100%)</span></label><input type="date" id="t_aend" value="${t.actualEnd||''}"></div>
+      </div>
+      <div class="text-xs" style="background:var(--bg3);padding:6px 10px;border-radius:4px;margin-top:6px;">
+        💡 <strong>% จริงปัจจุบัน:</strong> <span id="t_actPctDisplay" style="font-weight:700;color:var(--green);">${computeActualPct(t).toFixed(0)}%</span>
+        · เทียบกับ <strong>% แผน ณ วันนี้:</strong> <span style="font-weight:700;color:var(--blue);">${(() => {
+          if (!t.planStart || !t.planEnd) return '-';
+          const td = today();
+          if (td <= t.planStart) return '0';
+          if (td >= t.planEnd) return '100';
+          const total = daysBetween(t.planStart, t.planEnd) || 1;
+          const passed = daysBetween(t.planStart, td);
+          return ((passed/total)*100).toFixed(0);
+        })()}%</span>
       </div>
     </div>
     <div class="field-row">
@@ -4952,8 +5507,17 @@ function openTaskModal(tid) {
     </div>`);
 }
 
+// V7.2: Show/hide blocked reason field based on checkbox
+function syncStatusUI() {
+  const blocked = document.getElementById('t_blocked');
+  const wrap = document.getElementById('t_blockedReasonWrap');
+  if (blocked && wrap) wrap.style.display = blocked.checked ? 'block' : 'none';
+}
+
 function saveTask(pid, tid) {
   const p = getProject(pid);
+  const inProgress = document.getElementById('t_inProgress')?.checked || false;
+  const blocked = document.getElementById('t_blocked')?.checked || false;
   const obj = {
     no: +document.getElementById('t_no').value || 0,
     taskCode: (document.getElementById('t_code')?.value || '').trim(),
@@ -4964,14 +5528,19 @@ function saveTask(pid, tid) {
     actualStart: document.getElementById('t_astart').value,
     actualEnd: document.getElementById('t_aend').value,
     budget: +document.getElementById('t_budget').value || 0,
-    planPct: +document.getElementById('t_planPct').value || 0,
-    actualPct: +document.getElementById('t_actPct').value || 0,
+    actualPct: +document.getElementById('t_actPct')?.value || 0,
+    inProgress,
+    blocked,
+    blockedReason: blocked ? (document.getElementById('t_blockedReason')?.value || '').trim() : '',
     isCritical: document.getElementById('t_crit').checked,
     warning: document.getElementById('t_warning').value.trim(),
     note: document.getElementById('t_note').value.trim(),
   };
   if (!obj.name) { toast('กรอกชื่องาน', 'error'); return; }
   if (obj.phase === '__new__') obj.phase = '';
+  if (blocked && !obj.blockedReason) { toast('⛔ กรุณาระบุเหตุผลที่ติดปัญหา', 'error'); return; }
+  // If marked in-progress with no manual %, default to 1
+  if (inProgress && !obj.actualEnd && obj.actualPct < 1) obj.actualPct = 1;
   if (tid) {
     const t = p.tasks.find(x => x.id === tid);
     if (t) Object.assign(t, obj);
@@ -4996,77 +5565,175 @@ function deleteTask(pid, tid) {
 /* ─── ADD TASKS FROM BOQ ─── */
 /* ─── ADD TASKS FROM MASTER LIBRARY (CSV) ─── */
 // ═══════════════════════════════════════════════════════
-// STANDARD SCHEDULE — สร้าง 40 Micro-tasks จาก MASTER_TASK_LIBRARY ทันที
-// Cascading: each task starts after previous ends, durations from library
+// STANDARD SCHEDULE V7 — ติ๊กเลือก task + แก้ duration ได้ก่อนสร้าง
+// 68 task บ้าน 2 ชั้น · 10 หมวด · งานทับซ้อนตาม offset
 // ═══════════════════════════════════════════════════════
 function openStandardScheduleModal() {
   const pid = document.getElementById('planProjectSel').value;
   const p = getProject(pid);
-  const total = MASTER_TASK_LIBRARY.length;
 
-  // Group counts by category
+  // Group by category preserving order
   const byCat = {};
+  const catOrder = [];
   MASTER_TASK_LIBRARY.forEach(t => {
-    byCat[t.category] = (byCat[t.category] || 0) + 1;
+    if (!byCat[t.category]) { byCat[t.category] = []; catOrder.push(t.category); }
+    byCat[t.category].push(t);
   });
-  const totalDays = MASTER_TASK_LIBRARY.reduce((s,t) => s + (t.duration||1), 0);
 
-  const catSummary = Object.entries(byCat).map(([cat, count]) => {
-    const days = MASTER_TASK_LIBRARY.filter(t => t.category === cat).reduce((s,t) => s + (t.duration||1), 0);
-    return `<div style="display:flex;justify-content:space-between;padding:4px 8px;font-size:11px;border-bottom:1px solid var(--border);">
-      <span>${cat}</span>
-      <span class="text-muted">${count} งาน · ${days} วัน</span>
-    </div>`;
-  }).join('');
-
+  const total = MASTER_TASK_LIBRARY.length;
   const startDate = p.startDate || today();
 
-  openModal(`<div class="modal-title">⚡ Standard Schedule</div>
-    <div class="modal-sub">สร้างแผนงานมาตรฐานบ้าน 2 ชั้น (Micro-tasks V4)</div>
+  // Build category panels with checkboxes
+  const catBlocks = catOrder.map(cat => {
+    const items = byCat[cat];
+    const rows = items.map(t => `
+      <div class="ss-task-row" data-code="${t.code}" style="display:grid;grid-template-columns:24px 70px 1fr 72px;gap:6px;align-items:center;padding:5px 4px;border-bottom:1px solid var(--border);font-size:11px;">
+        <input type="checkbox" class="ss-task-check" data-cat="${cat.replace(/"/g,'&quot;')}" data-code="${t.code}" checked style="width:auto;margin:0;">
+        <span class="text-xs" style="font-family:monospace;color:var(--blue);font-weight:600;">${t.code}</span>
+        <span style="line-height:1.3;">${t.name}</span>
+        <div style="display:flex;align-items:center;gap:3px;">
+          <input type="number" class="ss-task-dur" data-code="${t.code}" value="${t.duration}" min="1" max="60"
+                 style="width:46px;padding:2px 4px;font-size:11px;text-align:center;" title="จำนวนวัน">
+          <span class="text-xs text-muted">วัน</span>
+        </div>
+      </div>`).join('');
+    return `
+      <div class="ss-cat-block" style="margin-bottom:10px;border:1px solid var(--border);border-radius:6px;overflow:hidden;">
+        <div style="background:var(--bg3);padding:6px 10px;display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" class="ss-cat-check" data-cat="${cat.replace(/"/g,'&quot;')}" checked style="width:auto;margin:0;">
+          <strong style="flex:1;font-size:12px;color:var(--accent);">${cat}</strong>
+          <span class="text-xs text-muted" data-cat-summary="${cat.replace(/"/g,'&quot;')}">${items.length}/${items.length} · ${items.reduce((s,t)=>s+t.duration,0)} วัน</span>
+        </div>
+        <div>${rows}</div>
+      </div>`;
+  }).join('');
 
-    <div style="background:var(--bg3);padding:12px 14px;border-radius:6px;margin-bottom:14px;">
-      <div class="text-xs" style="font-weight:600;margin-bottom:6px;">📋 ระบบจะสร้างแผนงานเรียงต่อเนื่อง:</div>
-      <div style="background:var(--bg);border-radius:4px;max-height:240px;overflow-y:auto;margin-bottom:8px;">
-        ${catSummary}
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:6px 8px;font-weight:700;color:var(--accent);">
-        <span>รวม</span>
-        <span>${total} งาน · ${totalDays} วัน</span>
-      </div>
-    </div>
+  openModal(`<div class="modal-title">⚡ Standard Schedule V7 — บ้าน 2 ชั้น</div>
+    <div class="modal-sub">เลือกงานที่ต้องการ + แก้จำนวนวันได้ → กดยืนยันสร้างแผน</div>
 
-    <div class="field-row">
+    <div class="field-row" style="margin-bottom:10px;">
       <div class="field-group"><label>วันเริ่มโครงการ</label>
         <input type="date" id="ssStartDate" value="${startDate}" required>
       </div>
-      <div class="field-group" style="opacity:0.6;">
-        <label>โครงสร้างแผน</label>
-        <div style="padding:8px;font-size:11px;color:var(--text2);">📋 V6 Final (62 tasks · งานทับซ้อน)</div>
+      <div class="field-group">
+        <label>เครื่องมือเลือก</label>
+        <div style="display:flex;gap:4px;">
+          <button class="btn btn-sm" type="button" onclick="ssSelectAll(true)" style="font-size:10px;flex:1;">✓ ทั้งหมด</button>
+          <button class="btn btn-sm" type="button" onclick="ssSelectAll(false)" style="font-size:10px;flex:1;">✗ ไม่เอา</button>
+          <button class="btn btn-sm" type="button" onclick="ssResetDur()" style="font-size:10px;flex:1;" title="คืนค่าวันตั้งต้น">⟲ คืนวัน</button>
+        </div>
       </div>
     </div>
 
-    <div class="field-group">
+    <div style="max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--bg2);margin-bottom:10px;">
+      ${catBlocks}
+    </div>
+
+    <div id="ssSummary" style="background:rgba(63,185,80,0.08);border:1px solid var(--green);padding:8px 12px;border-radius:6px;margin-bottom:10px;font-size:11px;display:flex;justify-content:space-between;">
+      <span><strong id="ssSelCount">${total}</strong> / ${total} task</span>
+      <span>ระยะเวลา ~ <strong id="ssSelDays">193</strong> วัน</span>
+    </div>
+
+    <div class="field-group" style="margin-bottom:6px;">
       <label style="display:flex;align-items:center;gap:6px;font-size:11px;">
         <input type="checkbox" id="ssClearExisting" style="width:auto;">
         <strong>ลบ Task เดิมทั้งหมดก่อน</strong> (ถ้าไม่ติ๊ก = เพิ่มต่อจากของเดิม)
       </label>
     </div>
 
-    <div class="field-group">
+    <div class="field-group" style="margin-bottom:6px;">
       <label style="display:flex;align-items:center;gap:6px;font-size:11px;">
         <input type="checkbox" id="ssAddMaterials" checked style="width:auto;">
         <strong>เพิ่มวัสดุที่ต้องสั่งอัตโนมัติ</strong> (ตาม main material ของแต่ละ task)
       </label>
     </div>
 
-    <div class="text-xs text-muted" style="background:rgba(240,180,41,0.1);padding:8px;border-radius:6px;">
+    <div class="text-xs text-muted" style="background:rgba(240,180,41,0.1);padding:8px;border-radius:6px;margin-bottom:10px;">
       💡 หลังสร้างแล้ว แก้ไขแต่ละ task ได้ผ่านโมดอล · ปรับวันได้ที่ Gantt
     </div>
 
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">ยกเลิก</button>
-      <button class="btn btn-primary" onclick="generateStandardSchedule()">⚡ สร้างแผนงานทั้งหมด</button>
+      <button class="btn btn-primary" onclick="generateStandardSchedule()">⚡ สร้างแผนตามที่เลือก</button>
     </div>`);
+
+  // Wire up event handlers
+  setTimeout(() => {
+    // Category checkboxes toggle all child task checkboxes
+    document.querySelectorAll('.ss-cat-check').forEach(cb => {
+      cb.addEventListener('change', e => {
+        const cat = e.target.getAttribute('data-cat');
+        document.querySelectorAll(`.ss-task-check[data-cat="${cat.replace(/"/g,'\\"')}"]`).forEach(tcb => {
+          tcb.checked = e.target.checked;
+        });
+        ssUpdateSummary();
+      });
+    });
+    // Task checkboxes update category and summary
+    document.querySelectorAll('.ss-task-check').forEach(cb => {
+      cb.addEventListener('change', () => { ssUpdateCatChecks(); ssUpdateSummary(); });
+    });
+    // Duration inputs update summary
+    document.querySelectorAll('.ss-task-dur').forEach(inp => {
+      inp.addEventListener('input', ssUpdateSummary);
+    });
+  }, 30);
+}
+
+function ssSelectAll(check) {
+  document.querySelectorAll('.ss-task-check, .ss-cat-check').forEach(cb => cb.checked = check);
+  ssUpdateSummary();
+}
+
+function ssResetDur() {
+  document.querySelectorAll('.ss-task-dur').forEach(inp => {
+    const code = inp.getAttribute('data-code');
+    const tpl = MASTER_TASK_LIBRARY.find(t => t.code === code);
+    if (tpl) inp.value = tpl.duration;
+  });
+  ssUpdateSummary();
+}
+
+function ssUpdateCatChecks() {
+  document.querySelectorAll('.ss-cat-check').forEach(cb => {
+    const cat = cb.getAttribute('data-cat');
+    const tcbs = document.querySelectorAll(`.ss-task-check[data-cat="${cat.replace(/"/g,'\\"')}"]`);
+    const checked = Array.from(tcbs).filter(t => t.checked).length;
+    cb.checked = checked === tcbs.length && tcbs.length > 0;
+    cb.indeterminate = checked > 0 && checked < tcbs.length;
+  });
+}
+
+function ssUpdateSummary() {
+  let count = 0;
+  let maxEnd = 0;
+  // Group by category for summary update
+  const catCounts = {};
+  document.querySelectorAll('.ss-task-check').forEach(cb => {
+    const cat = cb.getAttribute('data-cat');
+    if (!catCounts[cat]) catCounts[cat] = { total:0, checked:0, days:0 };
+    catCounts[cat].total++;
+    if (cb.checked) {
+      count++;
+      catCounts[cat].checked++;
+      const code = cb.getAttribute('data-code');
+      const tpl = MASTER_TASK_LIBRARY.find(t => t.code === code);
+      const durInp = document.querySelector(`.ss-task-dur[data-code="${code}"]`);
+      const dur = durInp ? (+durInp.value || tpl.duration) : tpl.duration;
+      catCounts[cat].days += dur;
+      const end = (tpl.offset || 0) + dur;
+      if (end > maxEnd) maxEnd = end;
+    }
+  });
+  // Update category summary spans
+  Object.entries(catCounts).forEach(([cat, c]) => {
+    const span = document.querySelector(`[data-cat-summary="${cat.replace(/"/g,'\\"')}"]`);
+    if (span) span.textContent = `${c.checked}/${c.total} · ${c.days} วัน`;
+  });
+  const sel = document.getElementById('ssSelCount');
+  const days = document.getElementById('ssSelDays');
+  if (sel) sel.textContent = count;
+  if (days) days.textContent = maxEnd;
 }
 
 function generateStandardSchedule() {
@@ -5076,6 +5743,20 @@ function generateStandardSchedule() {
   if (!startDate) { toast('กรุณาเลือกวันเริ่ม', 'error'); return; }
   const clearExisting = document.getElementById('ssClearExisting').checked;
   const addMaterials = document.getElementById('ssAddMaterials').checked;
+
+  // Collect checked tasks with custom durations
+  const selected = [];
+  document.querySelectorAll('.ss-task-check').forEach(cb => {
+    if (!cb.checked) return;
+    const code = cb.getAttribute('data-code');
+    const tpl = MASTER_TASK_LIBRARY.find(t => t.code === code);
+    if (!tpl) return;
+    const durInp = document.querySelector(`.ss-task-dur[data-code="${code}"]`);
+    const dur = durInp ? Math.max(1, +durInp.value || tpl.duration) : tpl.duration;
+    selected.push({ ...tpl, duration: dur });
+  });
+
+  if (selected.length === 0) { toast('กรุณาเลือกอย่างน้อย 1 task', 'error'); return; }
 
   if (clearExisting) {
     if (!confirm(`ยืนยันลบ ${(p.tasks||[]).length} task เดิม?`)) return;
@@ -5088,9 +5769,8 @@ function generateStandardSchedule() {
   let created = 0, materialsCreated = 0;
   let lastEnd = startDate;
 
-  MASTER_TASK_LIBRARY.forEach((tpl, idx) => {
+  selected.forEach((tpl) => {
     const dur = tpl.duration || 1;
-    // Use offset from V6 — calendar days from project start
     const offset = tpl.offset || 0;
     const planStart = addDays(startDate, offset);
     const planEnd = addDays(planStart, dur - 1);
@@ -5113,7 +5793,6 @@ function generateStandardSchedule() {
     });
     created++;
 
-    // Auto-add main materials with lead-day overrides
     if (addMaterials && tpl.main && tpl.main.length) {
       const matNo = (p.materials||[]).length;
       tpl.main.forEach((matName, mIdx) => {
@@ -5139,7 +5818,7 @@ function generateStandardSchedule() {
   p.endDate = lastEnd;
 
   logAction('create', 'standard-schedule',
-    `Standard Schedule V6 → ${p.name}: ${created} task, ${materialsCreated} วัสดุ`);
+    `Standard Schedule V7 → ${p.name}: ${created} task, ${materialsCreated} วัสดุ`);
   saveState(); closeModal(); renderAll();
   toast(`✓ สร้างแผนงาน ${created} task + ${materialsCreated} วัสดุ`);
 }
@@ -5496,17 +6175,20 @@ function openSubTaskModal(tid, stid) {
     </details>
     <div style="background:rgba(88,166,255,0.08);padding:10px;border-radius:6px;margin-bottom:10px;">
       <div class="text-xs text-muted mb-sm" style="font-weight:600;">📐 แผน</div>
-      <div class="field-row-3">
+      <div class="field-row">
         <div class="field-group"><label>วันเริ่ม</label><input type="date" id="st_pstart" value="${st.planStart||''}"></div>
         <div class="field-group"><label>วันสิ้นสุด</label><input type="date" id="st_pend" value="${st.planEnd||''}"></div>
-        <div class="field-group"><label>% จริง</label><input type="number" id="st_actPct" value="${st.actualPct||0}" min="0" max="100"></div>
       </div>
     </div>
     <div style="background:rgba(63,185,80,0.08);padding:10px;border-radius:6px;margin-bottom:10px;">
-      <div class="text-xs text-muted mb-sm" style="font-weight:600;">✅ จริง</div>
+      <div class="text-xs text-muted mb-sm" style="font-weight:600;">✅ จริง <span class="text-xs" style="font-weight:400;color:var(--text3);">— % คำนวณอัตโนมัติ</span></div>
       <div class="field-row">
         <div class="field-group"><label>วันเริ่มจริง</label><input type="date" id="st_astart" value="${st.actualStart||''}"></div>
         <div class="field-group"><label>วันจบจริง</label><input type="date" id="st_aend" value="${st.actualEnd||''}"></div>
+      </div>
+      <div class="text-xs" style="background:var(--bg3);padding:6px 10px;border-radius:4px;margin-top:6px;">
+        💡 <strong>% จริงปัจจุบัน:</strong> <span style="font-weight:700;color:var(--green);">${computeActualPct(st).toFixed(0)}%</span>
+      </div>
       </div>
     </div>
     <div class="field-row">
@@ -5535,13 +6217,13 @@ function saveSubTask(pid, tid, stid) {
     planEnd: document.getElementById('st_pend').value,
     actualStart: document.getElementById('st_astart').value,
     actualEnd: document.getElementById('st_aend').value,
-    actualPct: +document.getElementById('st_actPct').value || 0,
     isCritical: document.getElementById('st_crit').checked,
     warning: document.getElementById('st_warning').value.trim(),
   };
   if (!obj.name) { toast('กรอกชื่อ', 'error'); return; }
-  obj.done = obj.actualPct >= 100;
-  if (obj.done && !obj.doneDate) obj.doneDate = today();
+  // done = if actualEnd is set
+  obj.done = !!obj.actualEnd;
+  if (obj.done && !obj.doneDate) obj.doneDate = obj.actualEnd || today();
   t.subTasks = t.subTasks || [];
   if (stid) {
     const st = t.subTasks.find(x => x.id === stid);
@@ -5565,9 +6247,64 @@ function deleteSubTaskFromModal(pid, tid, stid) {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   INSPECTION LOG (ลงวันตรวจงาน) — double-click on task/sub-task row
+   CELL ACTION PICKER — when user dbl-clicks a cell, ask what to do
    ══════════════════════════════════════════════════════════════ */
-function openInspectionModal(targetType, taskId, subTaskId) {
+function openCellActionPicker(dateStr, taskId, kind) {
+  const pid = document.getElementById('planProjectSel').value;
+  const p = getProject(pid);
+  if (!p) return;
+  // Find task or sub-task
+  let task = (p.tasks||[]).find(t => t.id === taskId);
+  let isSubTask = false;
+  let parentTask = null;
+  if (!task && taskId) {
+    for (const t of (p.tasks||[])) {
+      const st = (t.subTasks||[]).find(s => s.id === taskId);
+      if (st) { task = st; parentTask = t; isSubTask = true; break; }
+    }
+  }
+  const taskName = task ? task.name : '(ไม่ผูก task)';
+  const parentInfo = isSubTask ? ` (ของ ${parentTask.name||''})` : '';
+
+  openModal(`<div class="modal-title">เลือกการกระทำ</div>
+    <div class="modal-sub">วันที่ ${fmtDateCE(dateStr)} · ${taskName}${parentInfo}</div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;margin:14px 0;">
+      <div class="action-pick-card" style="border:2px solid var(--accent);border-radius:8px;padding:14px;cursor:pointer;background:rgba(240,180,41,0.05);"
+           onclick="closeModal();openQuickMaterialModal('${dateStr}','${taskId||''}','${kind||'task'}')">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span style="font-size:32px;">🧱</span>
+          <div style="flex:1;">
+            <div style="font-size:14px;font-weight:700;color:var(--accent);">+ สั่งวัสดุ</div>
+            <div style="font-size:11px;color:var(--text2);">เพิ่มรายการสั่งของในวันนี้ (รับเสนอจาก Library)</div>
+          </div>
+          <span style="color:var(--accent);font-size:20px;">→</span>
+        </div>
+      </div>
+
+      ${task ? `<div class="action-pick-card" style="border:2px solid var(--blue);border-radius:8px;padding:14px;cursor:pointer;background:rgba(88,166,255,0.05);"
+           onclick="closeModal();openInspectionModal('${isSubTask?'sub':'task'}','${isSubTask?parentTask.id:taskId}','${isSubTask?taskId:''}','${dateStr}')">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span style="font-size:32px;">📋</span>
+          <div style="flex:1;">
+            <div style="font-size:14px;font-weight:700;color:var(--blue);">📋 นัดตรวจงาน</div>
+            <div style="font-size:11px;color:var(--text2);">นัดล่วงหน้า: วันที่ + เวลา + ผู้ตรวจ → ปฏิทินสรุป</div>
+            ${(task.plannedInspections||[]).length ? `<div style="font-size:10px;color:var(--blue);margin-top:3px;">มี ${task.plannedInspections.length} นัดแล้ว</div>` : ''}
+          </div>
+          <span style="color:var(--blue);font-size:20px;">→</span>
+        </div>
+      </div>` : ''}
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">ยกเลิก</button>
+    </div>`);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PLANNED INSPECTIONS — แผนนัดตรวจงาน (forward-looking)
+   ══════════════════════════════════════════════════════════════ */
+function openInspectionModal(targetType, taskId, subTaskId, initialDate) {
   const pid = document.getElementById('planProjectSel').value;
   const p = getProject(pid);
   if (!p) return;
@@ -5583,79 +6320,89 @@ function openInspectionModal(targetType, taskId, subTaskId) {
     parentName = parent.name || '';
   }
 
-  target.inspections = target.inspections || [];
+  target.plannedInspections = target.plannedInspections || [];
 
-  const inspectionList = target.inspections.length === 0
-    ? '<div class="text-muted text-center" style="padding:20px;font-size:11px;">ยังไม่มีบันทึกการตรวจ</div>'
-    : target.inspections.slice().reverse().map((ins, revIdx) => {
-        const origIdx = target.inspections.length - 1 - revIdx;
-        const resultColor = ins.result === 'pass' ? 'var(--green)'
-                          : ins.result === 'fail' ? 'var(--red)'
-                          : 'var(--accent)';
-        const resultLabel = ins.result === 'pass' ? '✓ ผ่าน'
-                          : ins.result === 'fail' ? '✗ ไม่ผ่าน'
-                          : '⚠ มีข้อแก้ไข';
-        return `<div style="border:1px solid var(--border);border-left:3px solid ${resultColor};border-radius:6px;padding:8px 12px;margin-bottom:6px;background:var(--bg2);">
+  const statusBadge = (s) => {
+    if (s === 'ผ่าน') return '<span class="badge badge-green">✓ ผ่าน</span>';
+    if (s === 'ไม่ผ่าน') return '<span class="badge badge-red">✗ ไม่ผ่าน</span>';
+    if (s === 'ตรวจแล้ว') return '<span class="badge badge-blue">📋 ตรวจแล้ว</span>';
+    if (s === 'เลื่อน') return '<span class="badge badge-yellow">⏳ เลื่อน</span>';
+    return '<span class="badge" style="background:rgba(139,148,158,0.2);color:var(--text2);">🕐 รอ</span>';
+  };
+
+  // Sort: future first, then past
+  const sorted = target.plannedInspections.slice().sort((a,b) => {
+    const da = a.scheduledDate || '';
+    const db = b.scheduledDate || '';
+    return da.localeCompare(db);
+  });
+
+  const inspectionList = sorted.length === 0
+    ? '<div class="text-muted text-center" style="padding:20px;font-size:11px;">ยังไม่มีนัดตรวจ — เพิ่มได้ด้านบน</div>'
+    : sorted.map((ins) => {
+        const td = today();
+        const isPast = ins.scheduledDate < td;
+        const isToday = ins.scheduledDate === td;
+        const dayColor = isToday ? 'var(--red)' : isPast ? 'var(--text3)' : 'var(--blue)';
+        const origIdx = target.plannedInspections.findIndex(x => x.id === ins.id);
+        return `<div style="border:1px solid var(--border);border-left:3px solid ${dayColor};border-radius:6px;padding:8px 12px;margin-bottom:6px;background:var(--bg2);">
           <div class="flex-between" style="margin-bottom:4px;">
-            <strong style="font-size:12px;color:${resultColor};">${resultLabel}</strong>
-            <span class="text-xs text-muted">${fmtDate(ins.date)} ${ins.time?'· '+ins.time:''}</span>
+            <div>
+              <strong style="font-size:13px;color:${dayColor};">${fmtDate(ins.scheduledDate)}</strong>
+              ${ins.scheduledTime ? `<span style="font-size:11px;color:var(--text2);margin-left:6px;">${ins.scheduledTime}</span>` : ''}
+              ${isToday ? '<span class="badge" style="background:rgba(198,40,40,0.15);color:var(--red);margin-left:6px;">📍 วันนี้</span>' : ''}
+            </div>
+            ${statusBadge(ins.status||'รอ')}
           </div>
-          <div class="text-xs" style="margin-bottom:3px;"><strong>ผู้ตรวจ:</strong> ${(ins.inspector||'-').replace(/</g,'&lt;')}</div>
+          <div class="text-xs"><strong>ผู้ตรวจ:</strong> ${(ins.inspector||'-').replace(/</g,'&lt;')}</div>
           ${ins.note ? `<div class="text-xs" style="color:var(--text2);background:var(--bg3);padding:4px 6px;border-radius:4px;margin-top:4px;">${(ins.note||'').replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>` : ''}
-          <button class="btn btn-sm btn-danger" style="margin-top:4px;padding:2px 8px;font-size:9px;" onclick="deleteInspection('${pid}','${taskId}','${subTaskId||''}','${targetType}',${origIdx})">ลบ</button>
+          <div class="flex gap-sm" style="margin-top:6px;">
+            <select class="btn-sm" onchange="updateInspectionStatus('${pid}','${taskId}','${subTaskId||''}','${targetType}','${ins.id}',this.value)" style="padding:2px 6px;font-size:10px;">
+              <option value="รอ" ${(ins.status||'รอ')==='รอ'?'selected':''}>🕐 รอตรวจ</option>
+              <option value="ตรวจแล้ว" ${ins.status==='ตรวจแล้ว'?'selected':''}>📋 ตรวจแล้ว</option>
+              <option value="ผ่าน" ${ins.status==='ผ่าน'?'selected':''}>✓ ผ่าน</option>
+              <option value="ไม่ผ่าน" ${ins.status==='ไม่ผ่าน'?'selected':''}>✗ ไม่ผ่าน</option>
+              <option value="เลื่อน" ${ins.status==='เลื่อน'?'selected':''}>⏳ เลื่อน</option>
+            </select>
+            <button class="btn btn-sm btn-danger" style="padding:2px 8px;font-size:9px;" onclick="deleteInspection('${pid}','${taskId}','${subTaskId||''}','${targetType}','${ins.id}')">ลบ</button>
+          </div>
         </div>`;
       }).join('');
 
-  const titleIcon = targetType === 'task' ? '📋' : '🔸';
-  const titleLabel = targetType === 'task' ? 'Task' : 'Sub-task';
   const targetTitle = targetType === 'task'
     ? `${target.no||''}. ${target.name||''}`
     : `${target.name||''} <span class="text-xs text-muted">(ของ ${parentName})</span>`;
-
-  // Get current user (from role) for default inspector
   const role = (typeof getCurrentRole === 'function') ? getCurrentRole() : { name:'' };
   const defaultInspector = role.name || '';
+  const defaultDate = initialDate || today();
 
-  const nowDate = today();
-  const nowTime = new Date().toTimeString().slice(0,5);
-
-  openModal(`<div class="modal-title">${titleIcon} ลงวันตรวจงาน — ${titleLabel}</div>
+  openModal(`<div class="modal-title">📋 นัดตรวจงาน</div>
     <div class="modal-sub">${targetTitle}</div>
 
-    <div style="background:rgba(63,185,80,0.06);border-left:3px solid var(--green);padding:10px 12px;border-radius:6px;margin-bottom:14px;">
-      <div class="text-xs text-bold mb-sm">+ เพิ่มบันทึกการตรวจใหม่</div>
+    <div style="background:rgba(88,166,255,0.06);border-left:3px solid var(--blue);padding:10px 12px;border-radius:6px;margin-bottom:14px;">
+      <div class="text-xs text-bold mb-sm">+ เพิ่มนัดตรวจใหม่</div>
       <div class="field-row">
-        <div class="field-group"><label>วันที่ตรวจ</label>
-          <input type="date" id="ins_date" value="${nowDate}">
+        <div class="field-group"><label>วันนัดตรวจ</label>
+          <input type="date" id="ins_date" value="${defaultDate}">
         </div>
-        <div class="field-group"><label>เวลา</label>
-          <input type="time" id="ins_time" value="${nowTime}">
+        <div class="field-group"><label>เวลานัด</label>
+          <input type="time" id="ins_time" value="09:00">
         </div>
       </div>
       <div class="field-group"><label>ผู้ตรวจ</label>
-        <input type="text" id="ins_inspector" value="${defaultInspector}" placeholder="ชื่อ-สกุล ผู้ตรวจ">
+        <input type="text" id="ins_inspector" value="${defaultInspector}" placeholder="ชื่อผู้ที่จะไปตรวจ">
       </div>
-      <div class="field-group"><label>ผลการตรวจ</label>
-        <select id="ins_result">
-          <option value="pass">✓ ผ่าน</option>
-          <option value="fix">⚠ มีข้อแก้ไข</option>
-          <option value="fail">✗ ไม่ผ่าน</option>
-        </select>
+      <div class="field-group"><label>หมายเหตุ / สิ่งที่จะตรวจ</label>
+        <textarea id="ins_note" rows="2" placeholder="เช่น ตรวจ cover เหล็ก / นัดร่วมกับผู้รับเหมา / ฯลฯ"></textarea>
       </div>
-      <div class="field-group"><label>หมายเหตุ / รายละเอียดที่ตรวจ</label>
-        <textarea id="ins_note" rows="3" placeholder="เช่น ตรวจ cover คอนกรีต ผ่านเรียบร้อย / พบรูพรุนต้องซ่อม / ฯลฯ"></textarea>
-      </div>
-      <button class="btn btn-primary" onclick="saveInspection('${pid}','${taskId}','${subTaskId||''}','${targetType}')" style="width:100%;background:linear-gradient(135deg, var(--green), #2d8a3e);">+ บันทึกการตรวจ</button>
+      <button class="btn btn-primary" onclick="saveInspection('${pid}','${taskId}','${subTaskId||''}','${targetType}')" style="width:100%;background:linear-gradient(135deg, var(--blue), #1565c0);">+ นัดหมาย</button>
     </div>
 
-    <div class="text-xs text-bold mb-sm" style="color:var(--accent);">📜 ประวัติการตรวจ (${target.inspections.length})</div>
+    <div class="text-xs text-bold mb-sm" style="color:var(--accent);">📅 นัดตรวจทั้งหมด (${target.plannedInspections.length})</div>
     <div style="max-height:35vh;overflow-y:auto;">${inspectionList}</div>
 
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">ปิด</button>
-      ${targetType === 'task'
-        ? `<button class="btn" onclick="closeModal();openTaskModal('${taskId}')">✎ แก้ Task</button>`
-        : `<button class="btn" onclick="closeModal();openSubTaskModal('${taskId}','${subTaskId}')">✎ แก้ Sub-task</button>`}
     </div>`);
 }
 
@@ -5671,39 +6418,30 @@ function saveInspection(pid, taskId, subTaskId, targetType) {
   }
   if (!target) return;
 
-  const date = document.getElementById('ins_date').value;
-  const time = document.getElementById('ins_time').value;
+  const scheduledDate = document.getElementById('ins_date').value;
+  const scheduledTime = document.getElementById('ins_time').value;
   const inspector = document.getElementById('ins_inspector').value.trim();
-  const result = document.getElementById('ins_result').value;
   const note = document.getElementById('ins_note').value.trim();
 
-  if (!date) { toast('กรอกวันที่','error'); return; }
+  if (!scheduledDate) { toast('กรอกวันนัด','error'); return; }
   if (!inspector) { toast('กรอกชื่อผู้ตรวจ','error'); return; }
 
-  target.inspections = target.inspections || [];
-  target.inspections.push({
+  target.plannedInspections = target.plannedInspections || [];
+  target.plannedInspections.push({
     id: uid(),
-    date, time, inspector, result, note,
+    scheduledDate, scheduledTime, inspector, note,
+    status: 'รอ',
     createdAt: new Date().toISOString(),
   });
 
-  // Auto-update related fields based on inspection result
-  if (result === 'pass') {
-    // If pass and no actualEnd yet → set actualEnd to inspection date
-    if (!target.actualEnd) target.actualEnd = date;
-    if (!target.actualStart) target.actualStart = target.planStart || date;
-    if ((+target.actualPct||0) < 100) target.actualPct = 100;
-  }
-
   saveState();
-  toast(`✓ บันทึกการตรวจ ${result === 'pass' ? 'ผ่าน' : result === 'fail' ? 'ไม่ผ่าน' : 'มีข้อแก้ไข'}`);
+  toast('✓ นัดหมายตรวจสำเร็จ');
   closeModal();
-  // Re-open to show updated history
   openInspectionModal(targetType, taskId, subTaskId);
+  try { renderInspectionReport(); } catch(e){}
 }
 
-function deleteInspection(pid, taskId, subTaskId, targetType, idx) {
-  if (!confirm('ลบบันทึกการตรวจนี้?')) return;
+function updateInspectionStatus(pid, taskId, subTaskId, targetType, insId, newStatus) {
   const p = getProject(pid);
   if (!p) return;
   let target;
@@ -5713,11 +6451,32 @@ function deleteInspection(pid, taskId, subTaskId, targetType, idx) {
     const parent = (p.tasks||[]).find(t => t.id === taskId);
     target = parent ? (parent.subTasks||[]).find(s => s.id === subTaskId) : null;
   }
-  if (!target || !target.inspections) return;
-  target.inspections.splice(idx, 1);
+  if (!target || !target.plannedInspections) return;
+  const ins = target.plannedInspections.find(x => x.id === insId);
+  if (!ins) return;
+  ins.status = newStatus;
+  saveState();
+  toast(`✓ ${newStatus}`);
+  try { renderInspectionReport(); } catch(e){}
+}
+
+function deleteInspection(pid, taskId, subTaskId, targetType, insId) {
+  if (!confirm('ลบนัดตรวจนี้?')) return;
+  const p = getProject(pid);
+  if (!p) return;
+  let target;
+  if (targetType === 'task') {
+    target = (p.tasks||[]).find(t => t.id === taskId);
+  } else {
+    const parent = (p.tasks||[]).find(t => t.id === taskId);
+    target = parent ? (parent.subTasks||[]).find(s => s.id === subTaskId) : null;
+  }
+  if (!target || !target.plannedInspections) return;
+  target.plannedInspections = target.plannedInspections.filter(x => x.id !== insId);
   saveState();
   closeModal();
   openInspectionModal(targetType, taskId, subTaskId);
+  try { renderInspectionReport(); } catch(e){}
 }
 
 /* ─── EXCEL UPLOAD (Plan) ─── */
@@ -5983,6 +6742,199 @@ function doImportPlan() {
   saveState(); closeModal(); renderPlan(); renderDashboard();
   toast(`✓ Import ${parsed.tasks.length} tasks${parsed.materials.length?` + ${parsed.materials.length} วัสดุ`:''}`);
   window._planParsed = null;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   INSPECTION REPORT — แผนนัดตรวจงาน + ปฏิทิน
+   ══════════════════════════════════════════════════════════════ */
+function renderInspectionReport() {
+  const sel = document.getElementById('inspProjSel');
+  if (!sel) return;
+  // Populate project list
+  if (sel.options.length !== state.projects.length + 1) {
+    sel.innerHTML = '<option value="all">ทุกโครงการ</option>' +
+      state.projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  }
+  const projFilter = sel.value || 'all';
+  const statusFilter = document.getElementById('inspFilter')?.value || 'all';
+  const projs = projFilter === 'all' ? state.projects : state.projects.filter(p => p.id === projFilter);
+
+  // Collect all planned inspections
+  const allInsp = [];
+  projs.forEach(p => {
+    (p.tasks||[]).forEach(t => {
+      (t.plannedInspections||[]).forEach(ins => {
+        allInsp.push({ ...ins, projectId:p.id, projectName:p.name, projectColor:p.color,
+          taskId:t.id, taskNo:t.no, taskName:t.name, parentTaskName:'', kind:'task', subTaskId:'' });
+      });
+      (t.subTasks||[]).forEach(st => {
+        (st.plannedInspections||[]).forEach(ins => {
+          allInsp.push({ ...ins, projectId:p.id, projectName:p.name, projectColor:p.color,
+            taskId:t.id, taskNo:t.no, taskName:st.name, parentTaskName:t.name||'', kind:'sub', subTaskId:st.id });
+        });
+      });
+    });
+  });
+  allInsp.sort((a,b) => (a.scheduledDate||'').localeCompare(b.scheduledDate||''));
+
+  // Filter
+  const filtered = statusFilter === 'all' ? allInsp : allInsp.filter(i => (i.status||'รอ') === statusFilter);
+
+  // KPIs
+  const td = today();
+  const total = allInsp.length;
+  const waiting = allInsp.filter(i => (i.status||'รอ') === 'รอ').length;
+  const upcoming = allInsp.filter(i => (i.status||'รอ') === 'รอ' && i.scheduledDate >= td).length;
+  const overdue = allInsp.filter(i => (i.status||'รอ') === 'รอ' && i.scheduledDate < td).length;
+  const passed = allInsp.filter(i => i.status === 'ผ่าน').length;
+
+  const kpiEl = document.getElementById('inspKpi');
+  if (kpiEl) kpiEl.innerHTML = `
+    <div class="kpi"><div class="kpi-accent" style="background:var(--blue);"></div>
+      <div class="kpi-label">นัดทั้งหมด</div>
+      <div class="kpi-value">${total}<span class="kpi-unit"> รายการ</span></div></div>
+    <div class="kpi"><div class="kpi-accent" style="background:var(--accent);"></div>
+      <div class="kpi-label">รอตรวจ — กำลังจะถึง</div>
+      <div class="kpi-value">${upcoming}<span class="kpi-unit"> นัด</span></div></div>
+    <div class="kpi"><div class="kpi-accent" style="background:var(--red);"></div>
+      <div class="kpi-label">⏱ เลยกำหนด</div>
+      <div class="kpi-value" style="color:${overdue>0?'var(--red)':''};">${overdue}<span class="kpi-unit"> นัด</span></div></div>
+    <div class="kpi"><div class="kpi-accent" style="background:var(--green);"></div>
+      <div class="kpi-label">ผ่านแล้ว</div>
+      <div class="kpi-value">${passed}<span class="kpi-unit"> นัด</span></div></div>`;
+
+  const container = document.getElementById('inspectionReport');
+  if (!container) return;
+
+  // ─── CALENDAR VIEW (current month) ───
+  const showMonth = window._inspCalMonth || td.substring(0,7);  // YYYY-MM
+  const [y, m] = showMonth.split('-').map(Number);
+  const monthStart = new Date(y, m-1, 1);
+  const monthEnd = new Date(y, m, 0);
+  const daysInMonth = monthEnd.getDate();
+  const firstDayOfWeek = monthStart.getDay();  // 0=Sun
+
+  // Group inspections by date
+  const byDate = {};
+  allInsp.forEach(i => {
+    if (!i.scheduledDate) return;
+    if (i.scheduledDate.substring(0,7) !== showMonth) return;
+    if (!byDate[i.scheduledDate]) byDate[i.scheduledDate] = [];
+    byDate[i.scheduledDate].push(i);
+  });
+
+  const dayNames = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+  let calHtml = `<div class="card-title">
+    <span>📅 ปฏิทินนัดตรวจ — ${['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][m-1]} ${y+543}</span>
+    <span style="float:right;">
+      <button class="btn btn-sm" onclick="navInspectionMonth(-1)">← เดือนก่อน</button>
+      <button class="btn btn-sm" onclick="navInspectionMonth(0)" style="margin:0 4px;">เดือนนี้</button>
+      <button class="btn btn-sm" onclick="navInspectionMonth(1)">เดือนหน้า →</button>
+    </span>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--border);margin-bottom:14px;">
+    ${dayNames.map((d,i)=>`<div style="background:var(--bg3);padding:6px;text-align:center;font-size:11px;font-weight:600;color:${i===0||i===6?'var(--red)':'var(--text2)'};">${d}</div>`).join('')}`;
+  // Empty cells before first day
+  for (let i = 0; i < firstDayOfWeek; i++) {
+    calHtml += `<div style="background:var(--bg);min-height:80px;"></div>`;
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const items = byDate[dateStr] || [];
+    const isToday = dateStr === td;
+    const dayOfWeek = new Date(y, m-1, d).getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const bg = isToday ? '#c62828' : (isWeekend ? 'rgba(248,81,73,0.04)' : 'var(--bg2)');
+    const dayColor = isToday ? '#fff' : (isWeekend ? 'var(--red)' : 'var(--text)');
+    calHtml += `<div style="background:${bg};min-height:80px;padding:4px;font-size:10px;">
+      <div style="font-weight:700;color:${dayColor};margin-bottom:2px;">${d}${isToday?' <span style="font-size:8px;background:#fff;color:#c62828;padding:1px 4px;border-radius:3px;">วันนี้</span>':''}</div>
+      ${items.slice(0,3).map(i => {
+        const c = (i.status==='ผ่าน')?'var(--green)':(i.status==='ไม่ผ่าน')?'var(--red)':(i.status==='ตรวจแล้ว')?'var(--blue)':'var(--accent)';
+        return `<div onclick="openInspectionModal('${i.kind}','${i.taskId}','${i.subTaskId||''}','${dateStr}')" title="${(i.taskName||'').replace(/"/g,'&quot;')} · ${i.inspector||''}" style="background:${c};color:#fff;font-size:9px;padding:2px 4px;border-radius:3px;margin-bottom:2px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${i.scheduledTime||''} ${i.taskName||''}</div>`;
+      }).join('')}
+      ${items.length > 3 ? `<div style="font-size:9px;color:var(--text3);text-align:center;">+${items.length-3} อื่น</div>` : ''}
+    </div>`;
+  }
+  calHtml += '</div>';
+
+  // ─── TABLE VIEW (list of inspections) ───
+  if (filtered.length === 0) {
+    calHtml += `<div class="text-muted text-center" style="padding:20px;">
+      ${total === 0 ? 'ยังไม่มีนัดตรวจ — ใน 3-Week ดับเบิ้ลคลิกเซลล์วันที่ต้องการ → "ลงวันตรวจงาน"' : 'ไม่มีรายการตามเงื่อนไข'}
+    </div>`;
+    container.innerHTML = calHtml;
+    return;
+  }
+
+  // Group by project
+  const byProj = {};
+  filtered.forEach(i => {
+    if (!byProj[i.projectId]) byProj[i.projectId] = { name:i.projectName, color:i.projectColor, items:[] };
+    byProj[i.projectId].items.push(i);
+  });
+
+  const statusBadge = (s) => {
+    if (s === 'ผ่าน') return '<span class="badge badge-green">✓ ผ่าน</span>';
+    if (s === 'ไม่ผ่าน') return '<span class="badge badge-red">✗ ไม่ผ่าน</span>';
+    if (s === 'ตรวจแล้ว') return '<span class="badge badge-blue">📋 ตรวจแล้ว</span>';
+    if (s === 'เลื่อน') return '<span class="badge badge-yellow">⏳ เลื่อน</span>';
+    return '<span class="badge" style="background:rgba(139,148,158,0.2);color:var(--text2);">🕐 รอ</span>';
+  };
+
+  let html = calHtml + '<div class="card-title">📋 รายการนัดทั้งหมด — เรียงตามวันที่</div>';
+
+  Object.entries(byProj).forEach(([pid, data]) => {
+    html += `<div style="margin-top:14px;">
+      <div style="background:${data.color||'#888'}33;padding:8px 12px;border-left:4px solid ${data.color||'#888'};border-radius:4px;margin-bottom:8px;">
+        <strong style="font-size:14px;">${data.name}</strong>
+        <span class="text-xs text-muted" style="margin-left:8px;">${data.items.length} นัด</span>
+      </div>
+      <div class="table-wrap">
+        <table style="width:100%;font-size:11px;border-collapse:collapse;">
+          <thead><tr style="background:var(--bg3);">
+            <th style="padding:6px 8px;width:90px;text-align:left;">วันนัด</th>
+            <th style="padding:6px 8px;width:55px;">เวลา</th>
+            <th style="padding:6px 8px;text-align:left;">งาน / Sub-task</th>
+            <th style="padding:6px 8px;width:100px;text-align:left;">ผู้ตรวจ</th>
+            <th style="padding:6px 8px;width:110px;text-align:center;">สถานะ</th>
+            <th style="padding:6px 8px;text-align:left;">หมายเหตุ</th>
+          </tr></thead>
+          <tbody>
+            ${data.items.map(i => {
+              const isPast = i.scheduledDate < td && (i.status||'รอ') === 'รอ';
+              const dateColor = i.scheduledDate === td ? 'var(--red)' : isPast ? 'var(--red)' : 'var(--text)';
+              return `<tr style="border-top:1px solid var(--border);${isPast?'background:rgba(248,81,73,0.05);':''}cursor:pointer;" onclick="openInspectionModal('${i.kind}','${i.taskId}','${i.subTaskId||''}','${i.scheduledDate}')">
+                <td style="padding:6px 8px;font-family:monospace;color:${dateColor};font-weight:${i.scheduledDate===td?'700':'500'};">${fmtDate(i.scheduledDate)}${isPast?' ⏱':''}</td>
+                <td style="padding:6px 8px;font-family:monospace;font-size:10px;color:var(--text2);">${i.scheduledTime||'-'}</td>
+                <td style="padding:6px 8px;">
+                  ${i.kind === 'sub' ? `<span class="text-xs text-muted">↳ ${i.parentTaskName} →</span> ` : `<strong>${i.taskNo||''}.</strong> `}
+                  <strong>${(i.taskName||'').replace(/</g,'&lt;')}</strong>
+                </td>
+                <td style="padding:6px 8px;">${(i.inspector||'-').replace(/</g,'&lt;')}</td>
+                <td style="padding:6px 8px;text-align:center;">${statusBadge(i.status||'รอ')}</td>
+                <td style="padding:6px 8px;font-size:10px;color:var(--text2);">${(i.note||'').replace(/</g,'&lt;').replace(/\n/g,'<br>')}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  });
+
+  container.innerHTML = html;
+}
+
+function navInspectionMonth(offset) {
+  const td = today();
+  const current = window._inspCalMonth || td.substring(0,7);
+  if (offset === 0) {
+    window._inspCalMonth = td.substring(0,7);
+  } else {
+    const [y, m] = current.split('-').map(Number);
+    const d = new Date(y, m-1+offset, 1);
+    window._inspCalMonth = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  }
+  renderInspectionReport();
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -7534,8 +8486,10 @@ function openPrintModal() {
   // Quick-action presets for common documents
   const presets = [
     { id:'weekly-materials', label:'📦 สรุปสั่งวัสดุประจำสัปดาห์', desc:'เฉพาะ "Weekly Material Order Summary" (ส่งจัดซื้อ)', icon:'📦', color:'var(--green)' },
-    { id:'plan-gantt', label:'📊 Gantt Chart รายโครงการ', desc:'Master schedule + timeline', icon:'📊', color:'var(--blue)' },
-    { id:'plan-3week', label:'📅 3-Week Lookahead', desc:'แผน 3 สัปดาห์หน้า', icon:'📅', color:'var(--accent)' },
+    { id:'inspection-report', label:'📋 แผนนัดตรวจงาน + ปฏิทิน', desc:'นัดตรวจล่วงหน้า + calendar view', icon:'📋', color:'var(--blue)' },
+    { id:'plan-gantt', label:'📊 Gantt Chart รายโครงการ', desc:'Master schedule + timeline ทั้งโครงการ', icon:'📊', color:'var(--blue)' },
+    { id:'plan-3week', label:'📅 3-Week (เฉพาะช่วงปัจจุบัน)', desc:'3 สัปดาห์ที่กำลังเลื่อนดูอยู่', icon:'📅', color:'var(--accent)' },
+    { id:'plan-3week-all', label:'📆 3-Week (ทุกสัปดาห์ของโครงการ)', desc:'ตั้งแต่เริ่ม → สิ้นสุดโครงการ · หลายหน้า', icon:'📆', color:'var(--orange)' },
     { id:'dashboard', label:'📈 Dashboard รวม', desc:'สรุปทุกโครงการ', icon:'📈', color:'var(--purple)' },
     { id:'reports', label:'📑 Reports (Executive)', desc:'รายงานสำหรับผู้บริหาร', icon:'📑', color:'var(--orange)' },
   ];
@@ -7568,11 +8522,13 @@ function openPrintModal() {
         <select id="printTarget">
           <option value="dashboard" ${defaultPrintTarget==='dashboard'?'selected':''}>📊 Dashboard</option>
           <option value="plan-gantt" ${defaultPrintTarget==='plan-gantt'?'selected':''}>📋 Gantt Chart</option>
-          <option value="plan-3week" ${defaultPrintTarget==='plan-3week'?'selected':''}>📅 3-Week Lookahead</option>
+          <option value="plan-3week" ${defaultPrintTarget==='plan-3week'?'selected':''}>📅 3-Week (ช่วงปัจจุบัน)</option>
+          <option value="plan-3week-all">📆 3-Week (ทุกสัปดาห์ของโครงการ)</option>
           <option value="plan-scurve" ${defaultPrintTarget==='plan-scurve'?'selected':''}>📈 Master + S-Curve</option>
           <option value="plan-list" ${defaultPrintTarget==='plan-list'?'selected':''}>📃 List View</option>
           <option value="plan-materials" ${defaultPrintTarget==='plan-materials'?'selected':''}>🧱 สั่งวัสดุ (ทั้งหน้า)</option>
           <option value="weekly-materials">📦 เฉพาะ Weekly Materials</option>
+          <option value="inspection-report" ${defaultPrintTarget==='inspections'?'selected':''}>📋 ตารางการตรวจงาน</option>
           <option value="reports" ${defaultPrintTarget==='reports'?'selected':''}>📑 Reports</option>
         </select>
       </div>
@@ -7641,9 +8597,118 @@ function doPrintPdfCustom() {
   doPrintPdfDirect(target, size, orient, preview);
 }
 
+/* For "Print 3-Week all weeks" mode — render multiple 3-week windows stacked vertically */
+function prepareAllWeeksFor3WeekPrint(p) {
+  if (!p || !p.tasks) return;
+  // Get project date range
+  let minDate = null, maxDate = null;
+  (p.tasks||[]).forEach(t => {
+    if (t.planStart) { if (!minDate || t.planStart < minDate) minDate = t.planStart; }
+    if (t.planEnd) { if (!maxDate || t.planEnd > maxDate) maxDate = t.planEnd; }
+    (t.subTasks||[]).forEach(st => {
+      if (st.planStart) { if (!minDate || st.planStart < minDate) minDate = st.planStart; }
+      if (st.planEnd) { if (!maxDate || st.planEnd > maxDate) maxDate = st.planEnd; }
+    });
+  });
+  if (!minDate || !maxDate) {
+    toast('ไม่มี task ที่มีวันแผน','error');
+    return;
+  }
+  // Align to week start (Monday)
+  let cursor = weekStart(minDate);
+  const endLimit = weekStart(addDays(maxDate, 6));
+
+  // Container in the 3-week pane
+  const tw = document.getElementById('threeWeekView');
+  if (!tw) return;
+
+  // Save original state
+  const origWeekStart = state.settings.week3Start;
+
+  // Build series of 3-week sections, each into its own div
+  const sections = [];
+  let safetyCount = 0;
+  while (cursor <= endLimit && safetyCount < 30) {
+    sections.push(cursor);
+    cursor = addDays(cursor, 21); // next 3-week window
+    safetyCount++;
+  }
+
+  // Render each section into a wrapper div
+  let allHtml = '';
+  sections.forEach((wkStart, idx) => {
+    state.settings.week3Start = wkStart;
+    // Re-render 3-week into hidden container
+    render3WeekView(p);
+    const inner = tw.innerHTML;
+    allHtml += `<div class="print-3week-section" style="${idx>0?'page-break-before:always;margin-top:8mm;':''}">
+      <div style="font-size:12pt;font-weight:700;color:#1F3864;border-bottom:1pt solid #999;padding-bottom:2mm;margin-bottom:3mm;">
+        ช่วงที่ ${idx+1}: ${fmtDateShort(wkStart)} – ${fmtDateShort(addDays(wkStart, 20))}
+      </div>
+      ${inner}
+    </div>`;
+  });
+  // Replace the entire 3-week pane content
+  tw.innerHTML = allHtml;
+
+  // Restore original after print (will be done in cleanup)
+  state.settings.week3Start = origWeekStart;
+}
+
 function doPrintPdfDirect(target, size, orient, preview) {
-  // Special handling: weekly-materials = isolate to ONLY the weekly summary card
+  // CRITICAL: force-close ALL modals/overlays before printing
+  const overlay = document.getElementById('modalOverlay');
+  if (overlay) {
+    overlay.classList.remove('active');
+    overlay.style.display = 'none';
+    overlay.setAttribute('data-no-print','1');
+  }
+  document.querySelectorAll('.modal-backdrop, .modal').forEach(el => {
+    el.style.display = 'none';
+    el.setAttribute('data-no-print','1');
+  });
+  document.querySelectorAll('.context-menu').forEach(el => el.remove());
+
   switchToPrintTarget(target);
+
+  // ─── Fill print banner with project info ───
+  const pid = document.getElementById('planProjectSel')?.value;
+  const p = pid ? getProject(pid) : null;
+  const labels = {
+    'dashboard':'Dashboard',
+    'plan-gantt':'Master Schedule (Gantt)',
+    'plan-3week':'3-Week Lookahead Schedule',
+    'plan-3week-all':'3-Week Lookahead — ทุกสัปดาห์',
+    'plan-scurve':'Master + S-Curve',
+    'plan-list':'Task List',
+    'plan-materials':'Material Order',
+    'weekly-materials':'สรุปสั่งวัสดุประจำสัปดาห์',
+    'inspection-report':'แผนนัดตรวจงาน',
+    'reports':'Executive Report',
+  };
+  const banner = document.getElementById('printBanner');
+  if (banner) {
+    const titleEl = document.getElementById('printBannerTitle');
+    const subEl = document.getElementById('printBannerSub');
+    const dateEl = document.getElementById('printBannerDate');
+    const projEl = document.getElementById('printBannerProject');
+    if (titleEl) titleEl.textContent = labels[target] || 'รายงาน';
+    if (subEl) {
+      if (target === 'dashboard' || target === 'inspection-report' || target === 'reports') {
+        subEl.textContent = 'รวมทุกโครงการ';
+      } else {
+        subEl.textContent = p ? (p.scope || p.location || '') : '';
+      }
+    }
+    if (dateEl) dateEl.textContent = 'วันที่พิมพ์: ' + fmtDate(today());
+    if (projEl) {
+      if (target === 'dashboard' || target === 'inspection-report' || target === 'reports') {
+        projEl.textContent = `รวม ${state.projects.length} โครงการ`;
+      } else {
+        projEl.textContent = p ? p.name : '';
+      }
+    }
+  }
 
   // Inject @page for orientation
   const oldStyle = document.getElementById('dynamicPrintPageStyle');
@@ -7654,20 +8719,49 @@ function doPrintPdfDirect(target, size, orient, preview) {
   document.head.appendChild(pageStyle);
 
   document.body.classList.add('print-fit-width');
-
-  // Special class for weekly-materials only (hide other cards in materials page)
+  document.body.classList.remove('print-target-gantt','print-target-list','print-target-3week','print-target-scurve','print-target-materials');
+  if (target.startsWith('plan-3week')) {
+    document.body.classList.add('print-target-3week');
+  } else if (target.startsWith('plan-')) {
+    document.body.classList.add('print-target-' + target.replace('plan-',''));
+  }
   if (target === 'weekly-materials') {
-    document.body.classList.add('print-weekly-only');
+    document.body.classList.add('print-target-materials','print-weekly-only');
+  }
+  if (target === 'inspection-report') {
+    document.body.classList.add('print-inspection-only');
+  }
+
+  // ─── Special: print-3week-all → loop render all weeks ───
+  if (target === 'plan-3week-all') {
+    prepareAllWeeksFor3WeekPrint(p);
   }
 
   const cleanup = () => {
-    document.body.classList.remove('print-fit-width','print-weekly-only','print-preview');
+    document.body.classList.remove(
+      'print-fit-width','print-weekly-only','print-inspection-only','print-preview',
+      'print-target-gantt','print-target-list','print-target-3week','print-target-scurve','print-target-materials'
+    );
     const ps = document.getElementById('dynamicPrintPageStyle');
     if (ps) ps.remove();
     const eb = document.getElementById('exitPrintPreview');
     if (eb) eb.remove();
     const pb = document.getElementById('previewPrintBtn');
     if (pb) pb.remove();
+    document.querySelectorAll('[data-no-print]').forEach(el => {
+      if (el.id === 'modalOverlay') {
+        el.style.display = '';
+      } else {
+        el.style.display = '';
+      }
+      el.removeAttribute('data-no-print');
+    });
+    // Re-render 3-week to clean up "all weeks" mode
+    if (target === 'plan-3week-all') {
+      const tw = document.getElementById('threeWeekView');
+      if (tw) tw.innerHTML = '';
+      renderPlan();
+    }
   };
 
   if (preview) {
@@ -7688,10 +8782,13 @@ function doPrintPdfDirect(target, size, orient, preview) {
 
     toast(`👁 Preview · ${size.toUpperCase()} ${orient}`);
   } else {
-    setTimeout(() => {
-      window.print();
-      setTimeout(cleanup, 1500);
-    }, 200);
+    // Wait 2 frames + 300ms for DOM/render → ensure modal really gone
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      setTimeout(() => {
+        window.print();
+        setTimeout(cleanup, 1500);
+      }, 300);
+    }));
   }
 }
 
@@ -7701,6 +8798,11 @@ function switchToPrintTarget(target) {
   if (target === 'weekly-materials') {
     pageId = 'plan';
     tabId = 'materials';
+  } else if (target === 'inspection-report') {
+    pageId = 'inspections';
+  } else if (target === 'plan-3week-all') {
+    pageId = 'plan';
+    tabId = '3week';
   } else if (target.startsWith('plan-')) {
     pageId = 'plan';
     tabId = target.replace('plan-','');
@@ -8369,6 +9471,7 @@ function renderAll() {
   renderPlan();
   renderReports();
   renderProjectManage();
+  try { renderInspectionReport(); } catch(e) { console.error(e); }
 }
 
 applyTheme();
